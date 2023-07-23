@@ -901,6 +901,25 @@ reference = "main"
 resolved_reference = "5f252b6275bd643253ba42952719d6d53deb9ef1"
 
 [[package]]
+name = "openapi3"
+version = "1.8.1"
+description = "Client and Validator of OpenAPI 3 Specifications"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "openapi3-1.8.1-py2.py3-none-any.whl", hash = "sha256:ce6c9fb455e76ec055b3f885808ec8b3565f7fdc6153761a9daa4efc6e45081b"},
+    {file = "openapi3-1.8.1.tar.gz", hash = "sha256:cc696ce11088a7fbb5f366307b0aebd115528adfb401b3e817c520adf2e68f86"},
+]
+
+[package.dependencies]
+PyYaml = "*"
+requests = "*"
+
+[package.extras]
+test = ["fastapi (==0.76.0)", "hypercorn (==0.14.3)", "pydantic (==1.10.2)", "pytest", "pytest-asyncio (==0.16)", "uvloop (==0.17.0)"]
+
+[[package]]
 name = "orjson"
 version = "3.9.2"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
@@ -1214,7 +1233,7 @@ files = [
 name = "requests"
 version = "2.31.0"
 description = "Python HTTP for Humans."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1585,7 +1604,7 @@ files = [
 name = "urllib3"
 version = "2.0.4"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1823,4 +1842,4 @@ server = ["blacksheep", "importlib-metadata", "jinja2", "loguru", "oes-template"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "d53739870264de6caa4a067aed0287ebe88c78820d348af4de55c9b1d66392c0"
+content-hash = "47d8174c9e5f3cd591ccf5fab79bc39503fd2538caadbdbf4988bb39ec31ede7"

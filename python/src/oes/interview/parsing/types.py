@@ -5,6 +5,7 @@ import re
 from abc import abstractmethod
 from typing import Any
 
+from attrs import Attribute
 from oes.template import Condition, evaluate
 from typing_extensions import Protocol
 
@@ -16,9 +17,9 @@ and must not end with a "-".
 """
 
 
-def validate_identifier(instance, attribute, value: str):
+def validate_identifier(instance: object, attribute: Attribute, value: object):
     """Raise :class:`ValueError` if the string is not a valid identifier."""
-    if not re.match(IDENTIFIER_PATTERN, value, re.I):
+    if not isinstance(value, str) or not re.match(IDENTIFIER_PATTERN, value, re.I):
         raise ValueError(f"Invalid identifier: {value}")
 
 
