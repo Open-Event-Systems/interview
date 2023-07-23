@@ -1,20 +1,34 @@
 """Type declarations."""
 from abc import abstractmethod
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import Any, Optional, TypeVar, Union
 
-from oes.interview.parsing.location import Location
 from oes.template import Template
 from openapi3.schemas import Schema
 from typing_extensions import Protocol, TypeAlias, runtime_checkable
 
-Context: TypeAlias = Mapping[str, object]
+Context: TypeAlias = MutableMapping[str, object]
 """A template rendering context."""
+
+
+class Locator(Protocol):
+    """A variable locator."""
+
+    @abstractmethod
+    def evaluate(self, context: Context) -> object:
+        """Return the value of this locator."""
+        ...
+
+    @abstractmethod
+    def set(self, context: Context, value: object):
+        """Set the value at this locator."""
+        ...
+
 
 UserResponse: TypeAlias = Mapping[str, object]
 """A user response."""
 
-ResponseParser: TypeAlias = Callable[[UserResponse], Mapping[Location, object]]
+ResponseParser: TypeAlias = Callable[[UserResponse], Mapping[Locator, object]]
 """A callable that parses a response into a  mapping of variable locations/values."""
 
 T = TypeVar("T")
@@ -31,7 +45,7 @@ class Parseable(Protocol):
 
     @property
     @abstractmethod
-    def set(self) -> Optional[Location]:
+    def set(self) -> Optional[Locator]:
         """The variable location to set."""
         ...
 
@@ -87,7 +101,7 @@ class Evaluable(Protocol):
     """An object that can be evaluated."""
 
     @abstractmethod
-    def evaluate(self, **context: object) -> object:
+    def evaluate(self, context: Context) -> object:
         """Evaluate this evaluable."""
         ...
 

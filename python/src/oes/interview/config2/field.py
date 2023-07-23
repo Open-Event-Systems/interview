@@ -5,8 +5,7 @@ from typing import Any, Mapping, Optional
 
 import attr
 from attrs import Attribute, frozen
-from oes.interview.config2.types import Field
-from oes.interview.parsing.location import Location
+from oes.interview.config2.types import Field, Locator
 from oes.template import Template
 
 
@@ -14,7 +13,7 @@ from oes.template import Template
 class BaseField(Field, ABC):
     """The field implementation base class."""
 
-    set: Optional[Location] = None
+    set: Optional[Locator] = None
     optional: bool = False
     label: Optional[Template] = None
     error_messages: Optional[Mapping[str, str]] = None

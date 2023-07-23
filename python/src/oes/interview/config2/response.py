@@ -6,8 +6,8 @@ from typing import Optional, Type, TypeVar
 
 from attrs import AttrsInstance, asdict, make_class
 from cattrs import Converter
+from oes.interview.config2.locator import Locator
 from oes.interview.config2.types import Parseable, ResponseParser, UserResponse
-from oes.interview.parsing.location import Location
 
 AttrsT = TypeVar("AttrsT", bound=AttrsInstance)
 
@@ -32,11 +32,11 @@ def create_response_parser(
 
     by_name: dict[str, Parseable] = {name_factory(f): f for f in fields}
 
-    name_to_loc: dict[str, Optional[Location]] = {n: f.set for n, f in by_name.items()}
+    name_to_loc: dict[str, Optional[Locator]] = {n: f.set for n, f in by_name.items()}
 
     attrs_cls = _create_attrs_class(_make_class_name(name), by_name)
 
-    def parser(response: UserResponse) -> Mapping[Location, object]:
+    def parser(response: UserResponse) -> Mapping[Locator, object]:
         parsed_obj = _parse_response(response, attrs_cls, converter)
         by_loc = _map_response_values_to_locations(parsed_obj, name_to_loc)
         return by_loc
@@ -75,8 +75,8 @@ def _parse_response(
 
 def _map_response_values_to_locations(
     response_obj: AttrsInstance,
-    locations: Mapping[str, Optional[Location]],
-) -> Mapping[Location, object]:
+    locations: Mapping[str, Optional[Locator]],
+) -> Mapping[Locator, object]:
     """Map the attributes of a parsed user response to variable locations."""
     as_dict = asdict(response_obj)
     mapped = {}

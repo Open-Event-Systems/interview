@@ -14,7 +14,7 @@ class LogicAnd(Evaluable):
 
     and_: Sequence[Expression] = ()
 
-    def evaluate(self, **context: object) -> object:
+    def evaluate(self, context: Context) -> object:
         """Evaluate the AND."""
         return all(_eval(expr, context) for expr in self.and_)
 
@@ -25,7 +25,7 @@ class LogicOr(Evaluable):
 
     or_: Sequence[Expression] = ()
 
-    def evaluate(self, **context: object) -> object:
+    def evaluate(self, context: Context) -> object:
         """Evaluate the OR."""
         return any(_eval(expr, context) for expr in self.or_)
 
@@ -36,7 +36,7 @@ class LogicNot(Evaluable):
 
     not_: Expression
 
-    def evaluate(self, **context: object) -> object:
+    def evaluate(self, context: Context) -> object:
         """Evaluate the NOT."""
         return not _eval(self.not_, context)
 
