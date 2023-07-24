@@ -4,7 +4,6 @@ from typing import Optional
 
 from attrs import field, frozen
 from oes.interview.config2.types import Context, Field, Whenable
-from oes.interview.config.field import AbstractField
 from oes.interview.parsing.types import validate_identifier
 from oes.template import Template
 
@@ -22,7 +21,7 @@ class Question(Whenable):
     description: Optional[Template] = None
     """The question description."""
 
-    fields: Sequence[AbstractField] = ()
+    fields: Sequence[Field] = ()
     """Fields in the question."""
 
 

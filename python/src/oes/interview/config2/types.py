@@ -1,4 +1,6 @@
 """Type declarations."""
+from __future__ import annotations
+
 from abc import abstractmethod
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import Any, Optional, TypeVar, Union
@@ -20,8 +22,13 @@ class Locator(Protocol):
         ...
 
     @abstractmethod
-    def set(self, context: Context, value: object):
+    def set(self, value: object, context: Context):
         """Set the value at this locator."""
+        ...
+
+    @abstractmethod
+    def compare(self, other: Locator, context: Context) -> bool:
+        """Whether two locators are equal."""
         ...
 
 

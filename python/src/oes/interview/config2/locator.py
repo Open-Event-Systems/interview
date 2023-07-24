@@ -27,9 +27,13 @@ class Literal(Locator):
         """Return the value of this locator."""
         return self.value
 
-    def set(self, context: Context, value: object):
+    def set(self, value: object, context: Context):
         """Set the value at this locator."""
         raise TypeError("Cannot assign a literal")
+
+    def compare(self, other: Locator, context: Context) -> bool:
+        """Whether two locators are equal."""
+        return isinstance(other, Literal) and other.value == self.value
 
 
 @frozen
@@ -42,46 +46,76 @@ class Variable(Locator):
         """Return the value of this locator."""
         return context[self.name]
 
-    def set(self, context: Context, value: object):
+    def set(self, value: object, context: Context):
         """Set the value at this locator."""
         context[self.name] = value
 
+    def compare(self, other: Locator, context: Context) -> bool:
+        """Whether two locators are equal."""
+        return isinstance(other, Variable) and other.name == self.name
+
 
 @frozen
-class Access:
-    """A property access, like ``a.b`` or ``a["b"]``."""
+class Index(Locator):
+    """An index/property access, like ``a.b`` or ``a["b"]``."""
 
     target: Locator
-    name: Locator
+    index: Union[str, int]
 
     def evaluate(self, context: Context) -> object:
         """Return the value of this locator."""
-
-        if isinstance(self.name, Literal):
-            target_val = self.target.evaluate(context)
-            if hasattr(target_val, "__getitem__"):
-                return target_val[self.name.value]
-            else:
-                raise TypeError(f"Not a list/dict: {target_val}")
-        else:
-            return self.evaluate_name(context).evaluate(context)
-
-    def evaluate_name(self, context: Context) -> Access:
-        """Return a :class:`Access` with the ``name`` evaluated to a literal."""
-        name_val = self.name.evaluate(context)
-        if isinstance(name_val, (str, int)):
-            return Access(self.target, Literal(name_val))
-        else:
-            raise TypeError(f"Invalid index/property: {name_val}")
-
-    def set(self, context: Context, value: object):
-        """Set the value at this locator."""
-        name_val = self.name.evaluate(context)
         target_val = self.target.evaluate(context)
-        if hasattr(target_val, "__setitem__"):
-            target_val[name_val] = value
+        if hasattr(target_val, "__getitem__"):
+            return target_val[self.index]
         else:
             raise TypeError(f"Not a list/dict: {target_val}")
+
+    def set(self, value: object, context: Context):
+        """Set the value at this locator."""
+        target_val = self.target.evaluate(context)
+        if hasattr(target_val, "__setitem__"):
+            target_val[self.index] = value
+        else:
+            raise TypeError(f"Not a list/dict: {target_val}")
+
+    def compare(self, other: Locator, context: Context) -> bool:
+        """Whether two locators are equal."""
+        if isinstance(other, ParametrizedIndex):
+            return self.compare(other.evaluate_index(context), context)
+        else:
+            return (
+                isinstance(other, Index)
+                and other.index == self.index
+                and self.target.compare(other.target, context)
+            )
+
+
+@frozen
+class ParametrizedIndex(Locator):
+    """An index/property access with a variable, like ``a[n]``."""
+
+    target: Locator
+    index: Locator
+
+    def evaluate_index(self, context: Context) -> Index:
+        """Evaluate the ``index``, returning a :class:`Index`."""
+        index_val = self.index.evaluate(context)
+        if isinstance(index_val, (str, int)):
+            return Index(self.target, index_val)
+        else:
+            raise TypeError(f"Not a valid index: {index_val}")
+
+    def evaluate(self, context: Context) -> object:
+        """Return the value of this locator."""
+        return self.evaluate_index(context).evaluate(context)
+
+    def set(self, value: object, context: Context):
+        """Set the value at this locator."""
+        return self.evaluate_index(context).set(value, context)
+
+    def compare(self, other: Locator, context: Context) -> bool:
+        """Whether two locators are equal."""
+        return self.evaluate_index(context).compare(other, context)
 
 
 # numbers
@@ -132,10 +166,11 @@ def _parse_name_literal(res: pp.ParseResults) -> Literal:
 
 locator = pp.Forward()
 
-property_access = "." + name_literal("key")
-index_access = "[" + (locator | literal)("key") + "]"
+property_access = "." + name_literal("index")
+index_access = "[" + literal("index") + "]"
+param_index_access = "[" + locator("index_param") + "]"
 
-locator << variable + pp.Group(property_access("property") | index_access("index"))[...]
+locator << variable + pp.Group(property_access | param_index_access | index_access)[...]
 
 
 @locator.set_parse_action
@@ -148,7 +183,10 @@ def _parse_locator_recursive(
 ) -> Locator:
     if isinstance(right, pp.ParseResults):
         target = _parse_locator_recursive(left[:-1], left[-1])
-        return Access(target, right["key"])
+        if "index_param" in right:
+            return ParametrizedIndex(target, right["index_param"])
+        else:
+            return Index(target, right["index"].value)
     else:
         return right
 

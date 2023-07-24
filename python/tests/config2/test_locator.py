@@ -1,8 +1,9 @@
 import pytest
 from oes.interview.config2.locator import (
-    Access,
+    Index,
     InvalidLocatorError,
     Literal,
+    ParametrizedIndex,
     Variable,
     literal,
     parse_locator,
@@ -51,15 +52,20 @@ def test_parse_tokens_error(token, val):
     "val, expected",
     (
         ("var", Variable("var")),
-        ("a.b", Access(Variable("a"), Literal("b"))),
-        ('a["b"]', Access(Variable("a"), Literal("b"))),
-        ("a[0]", Access(Variable("a"), Literal(0))),
-        ("a[123]", Access(Variable("a"), Literal(123))),
-        ("a[b]", Access(Variable("a"), Variable("b"))),
-        ('a[b]["c"]', Access(Access(Variable("a"), Variable("b")), Literal("c"))),
-        ("a[b].c", Access(Access(Variable("a"), Variable("b")), Literal("c"))),
-        ("a[b[c]]", Access(Variable("a"), Access(Variable("b"), Variable("c")))),
-        ("a[ 0 ].b", Access(Access(Variable("a"), Literal(0)), Literal("b"))),
+        ("a.b", Index(Variable("a"), "b")),
+        ('a["b"]', Index(Variable("a"), "b")),
+        ("a[0]", Index(Variable("a"), 0)),
+        ("a[123]", Index(Variable("a"), 123)),
+        ("a[b]", ParametrizedIndex(Variable("a"), Variable("b"))),
+        ('a[b]["c"]', Index(ParametrizedIndex(Variable("a"), Variable("b")), "c")),
+        ("a[b].c", Index(ParametrizedIndex(Variable("a"), Variable("b")), "c")),
+        (
+            "a[b[c]]",
+            ParametrizedIndex(
+                Variable("a"), ParametrizedIndex(Variable("b"), Variable("c"))
+            ),
+        ),
+        ("a[ 0 ].b", Index(Index(Variable("a"), 0), "b")),
     ),
 )
 def test_parse_locator(val, expected):
@@ -114,5 +120,29 @@ def test_set_locator():
     }
 
     loc = parse_locator('a[d[a.b[0]]["e"]]')
-    loc.set(doc, "test")
+    loc.set("test", doc)
     assert doc["a"]["c"] == "test"
+
+
+@pytest.mark.parametrize(
+    "a, b, expected",
+    (
+        ("a", "a", True),
+        ("a", "b", False),
+        ("a[0]", "a[0]", True),
+        ("a[0]", "a[1]", False),
+        ("a[0]", "a[c]", True),
+        ("a[1]", "a[c]", False),
+    ),
+)
+def test_locator_compare(a, b, expected):
+    a = parse_locator(a)
+    b = parse_locator(b)
+
+    doc = {
+        "a": [0, 1],
+        "b": "c",
+        "c": 0,
+    }
+
+    assert a.compare(b, doc) == expected

@@ -1,8 +1,9 @@
 """Question bank module."""
+from __future__ import annotations
+
 from collections.abc import Iterator, MutableMapping
 
 from loguru import logger
-from oes.interview.config2.locator import Access
 from oes.interview.config2.question import Question
 from oes.interview.config2.types import Context, Locator
 
@@ -36,27 +37,7 @@ class QuestionBank(MutableMapping[str, Question]):
         self, loc: Locator, context: Context
     ) -> Iterator[Question]:
         """Yield :class:`Question` objects that provide the value at ``loc``."""
-        for question in self._questions.values():
-            if _check_question_provides_var(question, loc, context):
-                yield question
-
-
-def _check_question_provides_var(
-    question: Question, loc: Locator, context: Context
-) -> bool:
-    locs = (
-        _evaluate_access_names(field.set, context)
-        for field in question.fields
-        if field.set
-    )
-
-    eval_loc = _evaluate_access_names(loc, context)
-    return any(loc_ == eval_loc for loc_ in locs)
-
-
-def _evaluate_access_names(loc: Locator, context: Context) -> Locator:
-    if isinstance(loc, Access):
-        evaluated = loc.evaluate_name(context)
-        return Access(_evaluate_access_names(evaluated.target, context), evaluated.name)
-    else:
-        return loc
+        for q in self._questions.values():
+            locs = (f.set for f in q.fields if f.set)
+            if any(other.compare(loc, context) for other in locs):
+                yield q
