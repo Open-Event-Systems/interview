@@ -1,0 +1,17 @@
+---
+- id: name
+  title: Name
+  description: Enter your first and last name.
+  fields:
+    - set: first_name
+      type: text
+    - set: last_name
+      type: text
+
+- id: optional-text
+  title: Optional Text
+  description: Enter some optional text.
+  fields:
+    - set: optional_text
+      optional: true
+      type: text

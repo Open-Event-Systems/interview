@@ -1,1 +1,1 @@
-"""OES Interview Library"""
+"""Interview package."""

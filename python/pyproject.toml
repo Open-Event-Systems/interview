@@ -10,13 +10,13 @@ packages = [{ include = "oes", from = "src" }]
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
 
-# Dependencies just to create/validate interview state
+# Dependencies just to create/validate interview_old state
 pynacl = "^1.5.0"
 attrs = "^22.2.0"
 cattrs = "^22.2.0"
 orjson = "^3.8.8"
 
-# Dependencies to work with the interview process
+# Dependencies to work with the interview_old process
 jinja2 = { version = "^3.1.2", optional = true }
 pyparsing = { version = "^3.0.9", optional = true }
 importlib-metadata = { version = "^6.0.0", optional = true }
@@ -28,7 +28,7 @@ typing-extensions = "^4.7.1"
 oes-template = { git = "https://github.com/Open-Event-Systems/template.git", branch = "main", optional = true }
 oes-hook = { git = "https://github.com/Open-Event-Systems/hook.git", branch = "main" }
 
-# Dependencies to run the interview service
+# Dependencies to run the interview_old service
 blacksheep = { version = "^1.2.12", optional = true }
 typed-settings = { version = "^23.0.0", optional = true }
 uvicorn = { version = "^0.20.0", extras = ["standard"], optional = true }
@@ -75,12 +75,13 @@ mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
 
 # Field entry points
 [tool.poetry.plugins."oes.interview.field"]
-text = "oes.interview.config.fields.text:TextField"
-email = "oes.interview.config.fields.email:EmailField"
-number = "oes.interview.config.fields.number:NumberField"
-bool = "oes.interview.config.fields.bool:BoolField"
-select = "oes.interview.config.fields.select:SelectField"
-date = "oes.interview.config.fields.date:DateField"
+text = "oes.interview.input.field_types.text:TextField"
+button = "oes.interview.input.field_types.button:Button"
+#email = "oes.interview.config.fields.email:EmailField"
+#number = "oes.interview.config.fields.number:NumberField"
+#bool = "oes.interview.config.fields.bool:BoolField"
+#select = "oes.interview.config.fields.select:SelectField"
+#date = "oes.interview.config.fields.date:DateField"
 
 [build-system]
 requires = ["poetry-core"]

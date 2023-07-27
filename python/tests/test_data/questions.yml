@@ -1,17 +1,18 @@
 ---
-- id: name
-  title: Name
-  description: Enter your first and last name.
+- id: q1
+  title: Question 1
+  description: |
+    What is your name?
   fields:
-    - set: first_name
+    - set: person.name
       type: text
-    - set: last_name
-      type: text
-
-- id: optional-text
-  title: Optional Text
-  description: Enter some optional text.
-  fields:
-    - set: optional_text
-      optional: true
-      type: text
+      label: Name
+    - set: use_preferred_name
+      type: button
+      options:
+        - label: Use Other Name
+          value: true
+        - label: Next
+          value: false
+          default: true
+          primary: true
