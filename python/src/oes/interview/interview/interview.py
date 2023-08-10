@@ -35,7 +35,7 @@ class Step(Whenable, Protocol):
     """A step in an interview."""
 
     @abstractmethod
-    async def __call__(self, __state: InterviewState) -> StepResult:
+    async def __call__(self, state: InterviewState, /) -> StepResult:
         """Handle the step."""
         ...
 

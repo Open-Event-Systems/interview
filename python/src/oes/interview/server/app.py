@@ -7,7 +7,8 @@ from guardpost import Policy
 from guardpost.asynchronous.authentication import AuthenticationStrategy
 from guardpost.asynchronous.authorization import AuthorizationStrategy
 from oes.interview.config.interview import InterviewConfig
-from oes.interview.serialization import converter, json_default
+from oes.interview.interview.step import HookStep
+from oes.interview.serialization import configure_converter, converter, json_default
 from oes.interview.server.auth import APIKeyHandler
 from oes.interview.server.docs import docs
 from oes.interview.server.settings import Settings
@@ -61,6 +62,9 @@ def make_app(settings: Settings, interview_config: InterviewConfig) -> Applicati
 
     app.services.add_instance(settings)
     app.services.add_instance(interview_config)
+
+    configure_converter(HookStep.converter)
+    HookStep.json_default = json_default
 
     # middlewares
     configure_cors(

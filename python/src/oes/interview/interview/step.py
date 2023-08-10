@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Iterable, Mapping, Sequence
-from typing import Literal, Optional, Union
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from http.cookiejar import Cookie, CookieJar
+from typing import ClassVar, Literal, Optional, Union
 
+import httpx
 from attrs import frozen
 from cattrs import Converter
+from cattrs.preconf.orjson import OrjsonConverter, make_converter
 from oes.interview.input.logic import evaluate_whenable
 from oes.interview.interview.error import InterviewError
 from oes.interview.interview.interview import Step, StepResult
-from oes.interview.interview.result import AskResult, ExitResult
+from oes.interview.interview.result import AskResult, ExitResult, ResultContent
 from oes.interview.interview.state import InterviewState
 from oes.interview.variables.locator import Locator, UndefinedError
 from oes.interview.variables.undefined import Undefined
@@ -144,6 +147,51 @@ class ExitStep(Step):
         )
 
 
+class _NullCookieJar(CookieJar):
+    def set_cookie(self, cookie: Cookie):
+        return
+
+
+@frozen
+class HookStepResult:
+    """The result body from a hook step."""
+
+    state: InterviewState
+    content: Optional[ResultContent] = None
+
+
+@frozen
+class HookStep(Step):
+    """Invoke a webhook."""
+
+    url: str
+    """The hook URL."""
+
+    when: Union[ValueOrEvaluable, Sequence[ValueOrEvaluable]] = ()
+    """``when`` conditions."""
+
+    # a hack
+    converter: ClassVar[OrjsonConverter] = make_converter()
+    json_default: ClassVar[Callable[[object], object]] = lambda x: x
+    client: ClassVar[httpx.AsyncClient] = httpx.AsyncClient(cookies=_NullCookieJar())
+
+    async def __call__(self, state: InterviewState, /) -> StepResult:
+        body = HookStep.converter.dumps(state, default=HookStep.json_default)
+        res = await HookStep.client.post(
+            self.url,
+            headers={
+                "Content-Type": "application/json",
+            },
+            content=body,
+        )
+        res.raise_for_status()
+        if res.status_code == 204:
+            return StepResult(state, False)
+        else:
+            res_body = self.converter.loads(res.content, HookStepResult)
+            return StepResult(res_body.state, True, res_body.content)
+
+
 @frozen
 class Block(Step):
     """A block of steps."""
@@ -169,8 +217,8 @@ async def handle_steps(state: InterviewState, steps: Iterable[Step]) -> StepResu
     return StepResult(state, changed=False)
 
 
-def structure_step(converter: Converter, v: object, t: object) -> Step:
-    """Structure a :class:`Step`."""
+def structure_step(converter: Converter, v: object, t: object) -> Callable[..., Step]:
+    """Get a function to structure a :class:`Step`."""
     if isinstance(v, Mapping):
         step_cls = _get_step(v)
         if step_cls is not None:
@@ -185,6 +233,7 @@ _step_map = {
     "set": SetStep,
     "eval": EvalStep,
     "exit": ExitStep,
+    "url": HookStep,
 }
 
 
