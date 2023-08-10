@@ -5,16 +5,15 @@ import {
   useComponentDefaultProps,
 } from "@mantine/core"
 import { observer } from "mobx-react-lite"
-import { useContext } from "react"
-import { InterviewFormContext } from "#src/components/form/Form.js"
 import { DateInput, DateInputProps } from "@mantine/dates"
 import dayjs, { Dayjs, isDayjs } from "dayjs"
+import { FieldProps } from "#src/types.js"
+import { action } from "mobx"
 
 const useStyles = createStyles(() => ({ root: {} }))
 
-export type DateFieldProps = {
-  name: string
-} & DefaultProps<Selectors<typeof useStyles>> &
+export type DateFieldProps = FieldProps &
+  DefaultProps<Selectors<typeof useStyles>> &
   Omit<
     DateInputProps,
     "name" | "error" | "value" | "onChange" | "onBlur" | "styles"
@@ -24,7 +23,7 @@ export type DateFieldProps = {
  * Component for a date field.
  */
 export const DateField = observer((props: DateFieldProps) => {
-  const { name, className, classNames, styles, unstyled, ...other } =
+  const { className, classNames, styles, unstyled, state, required, ...other } =
     useComponentDefaultProps("OESIDateField", {}, props)
   const { cx, classes } = useStyles(undefined, {
     name: "OESIDateField",
@@ -33,15 +32,9 @@ export const DateField = observer((props: DateFieldProps) => {
     unstyled,
   })
 
-  const formState = useContext(InterviewFormContext)
-  const state = formState?.fields[name]
-  if (!formState || !state) {
-    return null
-  }
-
   let value
   if (
-    typeof state.value === "string" ||
+    typeof state.value == "string" ||
     state.value instanceof Date ||
     isDayjs(state.value)
   ) {
@@ -50,26 +43,33 @@ export const DateField = observer((props: DateFieldProps) => {
     value = null
   }
 
-  const errorMessage = state.showError ? state.error : undefined
+  const errorMessage =
+    !state.isValid && state.touched ? state.errors[0].message : undefined
 
   return (
     <DateInput
       className={cx(classes.root, className)}
-      label={state.fieldInfo.label || "Date"}
-      required={!state.fieldInfo.optional}
-      withAsterisk={!state.fieldInfo.optional}
-      autoComplete={state.fieldInfo.autocomplete || undefined}
+      label={state.schema.title}
+      required={required || !state.schema.nullable}
+      withAsterisk={required || !state.schema.nullable}
+      autoComplete={
+        state.schema["x-autocomplete"] as DateFieldProps["autoComplete"]
+      }
       inputMode="numeric"
       weekendDays={[]}
       {...other}
       error={errorMessage}
       value={value}
-      onChange={(e) => {
-        state.handleChange(e ?? undefined)
-      }}
-      onBlur={() => {
-        state.handleTouch()
-      }}
+      onChange={action((e) => {
+        if (e) {
+          state.value = dayjs(e).format("YYYY-MM-DD")
+        } else {
+          state.value = null
+        }
+      })}
+      onBlur={action(() => {
+        state.touched = true
+      })}
     />
   )
 })

@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import re
-from typing import Union
+from abc import abstractmethod
+from typing import Any, MutableMapping, Union
 
 import pyparsing as pp
 from attrs import frozen
-from oes.interview.input.types import Context, Locator, MutableContext
+from oes.template import Context, Evaluable
+from typing_extensions import Protocol, TypeAlias
 
 # Types
 
@@ -15,6 +17,29 @@ class InvalidLocatorError(ValueError):
     """Raised when a locator cannot be parsed."""
 
     pass
+
+
+MutableContext: TypeAlias = MutableMapping[str, Any]
+"""Mutable :class:`Context`."""
+
+
+class Locator(Evaluable, Protocol):
+    """A variable locator."""
+
+    @abstractmethod
+    def evaluate(self, __context: Context) -> object:
+        """Return the value of this locator."""
+        ...
+
+    @abstractmethod
+    def set(self, __value: object, __context: MutableContext):
+        """Set the value at this locator."""
+        ...
+
+    @abstractmethod
+    def compare(self, __other: Locator, __context: Context) -> bool:
+        """Whether two locators are equal."""
+        ...
 
 
 @frozen(repr=False)
@@ -34,6 +59,13 @@ class Literal(Locator):
     def compare(self, other: Locator, context: Context) -> bool:
         """Whether two locators are equal."""
         return isinstance(other, Literal) and other.value == self.value
+
+    def __str__(self) -> str:
+        if isinstance(self.value, str):
+            escaped = self.value.replace('"', '\\"')
+            return f'"{escaped}"'
+        else:
+            return str(self.value)
 
     def __repr__(self) -> str:
         return repr(self.value)
@@ -59,6 +91,9 @@ class Variable(Locator):
     def compare(self, other: Locator, context: Context) -> bool:
         """Whether two locators are equal."""
         return isinstance(other, Variable) and other.name == self.name
+
+    def __str__(self) -> str:
+        return self.name
 
     def __repr__(self) -> str:
         return self.name
@@ -101,11 +136,19 @@ class Index(Locator):
                 and self.target.compare(other.target, context)
             )
 
+    def __str__(self) -> str:
+        return f"{self.target}{self._format()}"
+
     def __repr__(self) -> str:
-        if isinstance(self.index, int):
-            return f"{self.target!r}[{self.index}]"
+        return f"{self.target!r}{self._format()}"
+
+    def _format(self) -> str:
+        if isinstance(self.index, str) and re.match(
+            r"^[a-z0-9_]+$", self.index, flags=re.I
+        ):
+            return f".{self.index}"
         else:
-            return f"{self.target!r}.{self.index}"
+            return f"[{Literal(self.index)}]"
 
 
 @frozen(repr=False)
@@ -138,6 +181,9 @@ class ParametrizedIndex(Locator):
         except LookupError:
             return False
         return eval_.compare(other, context)
+
+    def __str__(self) -> str:
+        return f"{self.target}[{self.index}]"
 
     def __repr__(self) -> str:
         return f"{self.target!r}[{self.index!r}]"

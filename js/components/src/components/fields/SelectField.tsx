@@ -12,39 +12,27 @@ import {
   StackProps,
   useComponentDefaultProps,
 } from "@mantine/core"
-import { AskField, FieldState } from "@open-event-systems/interview-lib"
 import { observer } from "mobx-react-lite"
-import { useContext } from "react"
-import { InterviewFormContext } from "#src/components/form/Form.js"
+import { FieldProps } from "#src/types.js"
+import { action } from "mobx"
+import { FieldState } from "@open-event-systems/interview-lib"
 
-export type SelectFieldProps = {
-  name: string
-}
+export type SelectFieldProps = FieldProps
 
 /**
  * Renders the appropriate type of component for a select field.
  */
 export const SelectField = observer((props: SelectFieldProps) => {
-  const { name } = props
+  const { state } = props
 
-  const formState = useContext(InterviewFormContext)
-  const state = formState?.fields[name]
-  if (!formState || !state) {
-    return null
-  }
+  const componentType = state.schema["x-component"] ?? "select"
 
-  const fieldInfo = state.fieldInfo as AskField & {
-    component: "radio" | "checkbox" | "dropdown"
-  }
-
-  const component = fieldInfo.component
-
-  if (component == "radio") {
-    return <RadioSelectField name={name} />
-  } else if (component == "checkbox") {
-    return <CheckboxSelectField name={name} />
+  if (componentType == "radio") {
+    return <RadioSelectField {...props} />
+  } else if (componentType == "checkbox") {
+    return <CheckboxSelectField {...props} />
   } else {
-    return <DropdownSelectField name={name} />
+    return <DropdownSelectField {...props} />
   }
 })
 
@@ -52,9 +40,8 @@ SelectField.displayName = "SelectField"
 
 const selectStyles = createStyles({ root: {} })
 
-export type DropdownSelectFieldProps = {
-  name: string
-} & DefaultProps<Selectors<typeof selectStyles>> &
+export type DropdownSelectFieldProps = FieldProps &
+  DefaultProps<Selectors<typeof selectStyles>> &
   Omit<SelectProps, "data" | "onChange" | "onBlur" | "value" | "styles">
 
 /**
@@ -62,8 +49,15 @@ export type DropdownSelectFieldProps = {
  */
 export const DropdownSelectField = observer(
   (props: DropdownSelectFieldProps) => {
-    const { styles, className, classNames, unstyled, name, ...other } =
-      useComponentDefaultProps("OESIDropdownSelectField", {}, props)
+    const {
+      styles,
+      className,
+      classNames,
+      unstyled,
+      state,
+      required,
+      ...other
+    } = useComponentDefaultProps("OESIDropdownSelectField", {}, props)
 
     const { classes, cx } = selectStyles(undefined, {
       name: "OESIDropdownSelectField",
@@ -72,34 +66,30 @@ export const DropdownSelectField = observer(
       unstyled,
     })
 
-    const formState = useContext(InterviewFormContext)
-    const state = formState?.fields[name]
-    if (!formState || !state) {
-      return null
-    }
-
-    const autoComplete = state.fieldInfo.autocomplete ?? undefined
-    const errorMessage = state.showError ? state.error : undefined
+    const error =
+      !state.isValid && state.touched ? state.errors[0].message : undefined
 
     return (
       <Select
         className={cx(className, classes.root)}
-        label={state.fieldInfo.label || undefined}
-        required={!state.fieldInfo.optional}
+        label={state.schema.title}
+        required={required || !state.schema.nullable}
         {...other}
-        error={errorMessage}
+        error={error}
         value={state.value != null ? `${state.value}` : null}
-        onChange={(e) => {
-          state.handleChange(e ?? undefined)
-        }}
-        onDropdownClose={() => {
-          state.handleTouch()
-        }}
+        onChange={action((e) => {
+          state.value = e
+        })}
+        onDropdownClose={action(() => {
+          state.touched = true
+        })}
         data={getOptions(state)}
-        autoComplete={autoComplete}
+        autoComplete={
+          state.schema["x-autocomplete"] as SelectProps["autoComplete"]
+        }
       />
     )
-  }
+  },
 )
 
 DropdownSelectField.displayName = "DropdownSelectField"
@@ -109,8 +99,7 @@ const radioStyles = createStyles({
   radio: {},
 })
 
-export type RadioSelectFieldProps = {
-  name: string
+export type RadioSelectFieldProps = FieldProps & {
   StackProps?: Partial<StackProps>
 } & DefaultProps<Selectors<typeof radioStyles>> &
   Omit<RadioGroupProps, "children" | "value" | "onChange" | "onBlur">
@@ -120,12 +109,13 @@ export type RadioSelectFieldProps = {
  */
 export const RadioSelectField = observer((props: RadioSelectFieldProps) => {
   const {
-    name,
     className,
     classNames,
     styles,
     unstyled,
     StackProps,
+    state,
+    required,
     ...other
   } = useComponentDefaultProps("OESIRadioSelectField", {}, props)
 
@@ -136,28 +126,23 @@ export const RadioSelectField = observer((props: RadioSelectFieldProps) => {
     unstyled,
   })
 
-  const formState = useContext(InterviewFormContext)
-  const state = formState?.fields[name]
-  if (!formState || !state) {
-    return null
-  }
-
-  const errorMessage = state.showError ? state.error : undefined
+  const error =
+    !state.isValid && state.touched ? state.errors[0].message : undefined
 
   return (
     <Radio.Group
-      label={state.fieldInfo.label || undefined}
-      withAsterisk={!state.fieldInfo.optional}
+      label={state.schema.title}
+      withAsterisk={required || !state.schema.nullable}
       className={cx(className, classes.root)}
       {...other}
-      error={errorMessage}
+      error={error}
       value={state.value as string | undefined}
-      onChange={(e) => {
-        state.handleChange(e)
-      }}
-      onBlur={() => {
-        state.handleTouch()
-      }}
+      onChange={action((e) => {
+        state.value = e
+      })}
+      onBlur={action(() => {
+        state.touched = true
+      })}
       styles={(theme) => ({
         error: {
           paddingTop: theme.spacing.xs,
@@ -185,8 +170,7 @@ const checkboxStyles = createStyles({
   checkbox: {},
 })
 
-export type CheckboxSelectFieldProps = {
-  name: string
+export type CheckboxSelectFieldProps = FieldProps & {
   StackProps?: Partial<StackProps>
 } & DefaultProps<Selectors<typeof checkboxStyles>> &
   Omit<CheckboxGroupProps, "children" | "value" | "onChange" | "onBlur">
@@ -197,12 +181,13 @@ export type CheckboxSelectFieldProps = {
 export const CheckboxSelectField = observer(
   (props: CheckboxSelectFieldProps) => {
     const {
-      name,
       className,
       classNames,
       styles,
       unstyled,
       StackProps,
+      state,
+      required,
       ...other
     } = useComponentDefaultProps("OESICheckboxSelectField", {}, props)
 
@@ -213,28 +198,35 @@ export const CheckboxSelectField = observer(
       unstyled,
     })
 
-    const formState = useContext(InterviewFormContext)
-    const state = formState?.fields[name]
-    if (!formState || !state) {
-      return null
-    }
+    const error =
+      !state.isValid && state.touched ? state.errors[0].message : undefined
 
-    const errorMessage = state.showError ? state.error : undefined
+    const isMulti = state.schema.type == "array"
+
+    const value = isMulti ? state.value ?? [] : state.value ? [state.value] : []
 
     return (
       <Checkbox.Group
-        label={state.fieldInfo.label || undefined}
-        withAsterisk={!state.fieldInfo.optional}
+        label={state.schema.title}
+        withAsterisk={required || !state.schema.nullable}
         className={cx(className, classes.root)}
         {...other}
-        error={errorMessage}
-        value={(state.value ?? []) as string[]}
-        onChange={(e) => {
-          state.handleChange(e)
-        }}
-        onBlur={() => {
-          state.handleTouch()
-        }}
+        error={error}
+        value={value as string[]}
+        onChange={action((e) => {
+          if (state.schema.type == "array") {
+            state.value = e
+          } else {
+            if (e.length == 0) {
+              state.value = null
+            } else {
+              state.value = e[0]
+            }
+          }
+        })}
+        onBlur={action(() => {
+          state.touched = true
+        })}
         styles={(theme) => ({
           error: {
             paddingTop: theme.spacing.xs,
@@ -253,7 +245,7 @@ export const CheckboxSelectField = observer(
         </Stack>
       </Checkbox.Group>
     )
-  }
+  },
 )
 
 CheckboxSelectField.displayName = "CheckboxSelectField"
@@ -262,6 +254,21 @@ CheckboxSelectField.displayName = "CheckboxSelectField"
  * Get the option labels from the json schema.
  */
 const getOptions = (state: FieldState) => {
-  const fieldInfo = state.fieldInfo as { options: string[] }
-  return fieldInfo.options.map((opt, i) => ({ value: `${i}`, label: opt }))
+  if (state.schema.type == "array") {
+    return (
+      state.schema.items?.oneOf?.map((opt, i) => ({
+        label: opt.title,
+        value: (opt.const as string) || `${i + 1}`,
+      })) ?? []
+    )
+  } else {
+    return (
+      state.schema.oneOf
+        ?.filter((opt) => opt.type != "null")
+        .map((opt, i) => ({
+          label: opt.title,
+          value: (opt.const as string) || `${i + 1}`,
+        })) ?? []
+    )
+  }
 }

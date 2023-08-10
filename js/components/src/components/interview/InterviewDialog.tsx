@@ -4,18 +4,21 @@ import {
   Modal,
   ModalProps,
   Selectors,
+  Text,
   useComponentDefaultProps,
 } from "@mantine/core"
 import {
   FormValues,
   InterviewStateStore,
 } from "@open-event-systems/interview-lib"
-import { observer } from "mobx-react-lite"
+import { Observer, observer, useLocalObservable } from "mobx-react-lite"
 import { ExitView, ExitViewProps } from "#src/components/interview/ExitView.js"
 import {
   QuestionView,
   QuestionViewProps,
 } from "#src/components/interview/QuestionView.js"
+import { InterviewComponent } from "#src/components/interview/InterviewComponent.js"
+import { createPortal } from "react-dom"
 
 const dialogStyles = createStyles({
   root: {},
@@ -38,17 +41,17 @@ export type InterviewDialogProps = {
   /**
    * The form submit handler.
    */
-  onSubmit: (values: FormValues, button: number | null) => Promise<void>
+  onSubmit: (values: FormValues) => Promise<void>
 
   /**
    * Props passed down to the {@link QuestionView} component.
    */
-  questionViewProps?: Partial<QuestionViewProps>
+  QuestionViewProps?: Partial<QuestionViewProps>
 
   /**
    * Props passed down to the {@link ExitView} component.
    */
-  exitViewProps?: Partial<ExitViewProps>
+  ExitViewProps?: Partial<ExitViewProps>
 } & DefaultProps<Selectors<typeof dialogStyles>> &
   Omit<ModalProps, "children" | "title" | "onSubmit" | "styles">
 
@@ -65,8 +68,8 @@ export const InterviewDialog = observer((props: InterviewDialogProps) => {
     stateStore,
     onSubmit,
     onClose,
-    questionViewProps,
-    exitViewProps,
+    QuestionViewProps,
+    ExitViewProps,
     ...other
   } = useComponentDefaultProps("OESIInterviewDialog", {}, props)
 
@@ -77,49 +80,59 @@ export const InterviewDialog = observer((props: InterviewDialogProps) => {
     unstyled,
   })
 
-  const record = stateStore.getRecord(recordId)
-  const content =
-    record?.stateResponse.complete != true
-      ? record?.stateResponse.content
-      : null
-  let children
-
-  switch (content?.type) {
-    case "question":
-      children = (
-        <QuestionView
-          key={recordId}
-          className={classes.question}
-          {...questionViewProps}
-          onSubmit={onSubmit}
-          content={content}
-        />
-      )
-      break
-    case "exit":
-      children = (
-        <ExitView
-          key={recordId}
-          className={classes.exit}
-          {...exitViewProps}
-          content={content}
-          onClose={() => onClose()}
-        />
-      )
-      break
-    default:
-      children = null
-      break
-  }
+  const state = useLocalObservable(() => ({
+    titleEl: null as HTMLElement | null,
+    setRef(el: HTMLElement | null) {
+      this.titleEl = el
+    },
+  }))
 
   return (
     <Modal
       className={cx(classes.root, className)}
       {...other}
       onClose={onClose}
-      title={content?.title ? content.title : undefined}
+      title={<Text ref={state.setRef} span></Text>}
     >
-      {children}
+      <InterviewComponent
+        key={recordId}
+        recordId={recordId}
+        onSubmit={onSubmit}
+        stateStore={stateStore}
+        renderQuestion={(props, title) => (
+          <Observer>
+            {() => (
+              <>
+                {state.titleEl
+                  ? createPortal(<>{title}</>, state.titleEl)
+                  : null}
+                <QuestionView
+                  className={classes.question}
+                  {...QuestionViewProps}
+                  {...props}
+                />
+              </>
+            )}
+          </Observer>
+        )}
+        renderExit={(props, title) => (
+          <Observer>
+            {() => (
+              <>
+                {state.titleEl
+                  ? createPortal(<>{title}</>, state.titleEl)
+                  : null}
+                <ExitView
+                  className={classes.exit}
+                  onClose={onClose}
+                  {...ExitViewProps}
+                  {...props}
+                />
+              </>
+            )}
+          </Observer>
+        )}
+      />
     </Modal>
   )
 })

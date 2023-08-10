@@ -9,13 +9,8 @@ import attr
 import importlib_metadata
 from attrs import Attribute, frozen, validators
 from cattrs import Converter
-from oes.interview.input.types import (
-    Field,
-    FieldWithOptions,
-    FieldWithType,
-    Locator,
-    Option,
-)
+from oes.interview.input.types import Field, FieldWithOptions, FieldWithType, Option
+from oes.interview.variables.locator import Locator
 from oes.template import Template
 
 
@@ -100,16 +95,21 @@ class BaseOptionsField(FieldWithOptions, Generic[_B_co], ABC):
 
     def convert_options(self, __ids: Iterable[str]) -> list[Any]:
         """Convert an iterable of option IDs to a list of values."""
+        if not all(isinstance(id, str) for id in __ids):
+            raise ValueError(f"Invalid options: {__ids}")
         return [self.convert_option(id) for id in __ids]
 
-    def convert_option(self, __id: str) -> Any:
+    def convert_option(self, __id: Optional[str]) -> Any:
         """Convert an option ID to its value."""
-        try:
-            opt = self.options_by_id[__id]
-        except KeyError as e:
-            raise ValueError(f"Invalid option: {__id}") from e
+        if __id is not None:
+            try:
+                opt = self.options_by_id[__id]
+            except KeyError as e:
+                raise ValueError(f"Invalid option: {__id}") from e
 
-        return opt.value
+            return opt.value
+        else:
+            return None
 
 
 def _button_id_gen(

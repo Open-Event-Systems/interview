@@ -1,88 +1,138 @@
 import { Box } from "@mantine/core"
-import { AskResult, FormState } from "@open-event-systems/interview-lib"
-import { InterviewFormContext } from "#src/components/form/Form.js"
 import { SelectField } from "#src/components/fields/SelectField.js"
+import { Meta, StoryObj } from "@storybook/react"
+import { useState } from "react"
+import { createState } from "@open-event-systems/interview-lib"
 
 export default {
   component: SelectField,
+} as Meta<typeof SelectField>
+
+const dropdown = {
+  type: "string",
+  "x-type": "select",
+  title: "Test",
+  oneOf: [
+    {
+      const: "1",
+      title: "Option 1",
+    },
+    {
+      const: "2",
+      title: "Option 2",
+    },
+    {
+      const: "3",
+      title: "Option 3",
+    },
+  ],
 }
 
-const dropdown: AskResult = {
-  type: "question",
+const radio = {
+  type: "string",
+  "x-type": "select",
+  "x-component": "radio",
   title: "Test",
-  description: "",
-  fields: {
-    test: {
-      type: "select",
-      label: "Choice",
-      component: "dropdown",
-      min: 1,
-      max: 1,
-      options: ["Option 1", "Option 2", "Option 3"],
+  oneOf: [
+    {
+      const: "1",
+      title: "Option 1",
     },
+    {
+      const: "2",
+      title: "Option 2",
+    },
+    {
+      const: "3",
+      title: "Option 3",
+    },
+  ],
+}
+
+const checkbox = {
+  type: "array",
+  "x-type": "select",
+  "x-component": "checkbox",
+  title: "Test",
+  items: {
+    oneOf: [
+      {
+        const: "1",
+        title: "Option 1",
+      },
+      {
+        const: "2",
+        title: "Option 2",
+      },
+      {
+        const: "3",
+        title: "Option 3",
+      },
+    ],
+  },
+  minItems: 1,
+  maxItems: 2,
+}
+
+const booleanSelect = {
+  type: "string",
+  "x-type": "select",
+  "x-component": "checkbox",
+  oneOf: [
+    {
+      const: "1",
+      title: "I accept",
+    },
+    { type: "null" },
+  ],
+  const: "1",
+  nullable: true,
+}
+
+export const Dropdown: StoryObj<typeof SelectField> = {
+  render(args) {
+    const [state] = useState(() => createState(dropdown))
+
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <SelectField {...args} state={state} required />
+      </Box>
+    )
   },
 }
 
-const radio: AskResult = {
-  type: "question",
-  title: "Test",
-  description: "",
-  fields: {
-    test: {
-      type: "select",
-      label: "Choice",
-      component: "radio",
-      min: 1,
-      max: 1,
-      options: ["Option 1", "Option 2", "Option 3"],
-    },
-  },
-}
-const checkbox: AskResult = {
-  type: "question",
-  title: "Test",
-  description: "",
-  fields: {
-    test: {
-      type: "select",
-      label: "Choice",
-      component: "checkbox",
-      min: 1,
-      max: 2,
-      options: ["Option 1", "Option 2", "Option 3"],
-    },
+export const Radio: StoryObj<typeof SelectField> = {
+  render(args) {
+    const [state] = useState(() => createState(radio))
+
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <SelectField {...args} state={state} required />
+      </Box>
+    )
   },
 }
 
-export const Dropdown = () => {
-  const state = FormState.create(dropdown.fields)
-  return (
-    <Box sx={{ maxWidth: 300 }}>
-      <InterviewFormContext.Provider value={state}>
-        <SelectField name="test" />
-      </InterviewFormContext.Provider>
-    </Box>
-  )
+export const Checkbox: StoryObj<typeof SelectField> = {
+  render(args) {
+    const [state] = useState(() => createState(checkbox))
+
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <SelectField {...args} state={state} required />
+      </Box>
+    )
+  },
 }
 
-export const Radio = () => {
-  const state = FormState.create(radio.fields)
-  return (
-    <Box sx={{ maxWidth: 300 }}>
-      <InterviewFormContext.Provider value={state}>
-        <SelectField name="test" />
-      </InterviewFormContext.Provider>
-    </Box>
-  )
-}
+export const Boolean: StoryObj<typeof SelectField> = {
+  render(args) {
+    const [state] = useState(() => createState(booleanSelect))
 
-export const Checkbox = () => {
-  const state = FormState.create(checkbox.fields)
-  return (
-    <Box sx={{ maxWidth: 300 }}>
-      <InterviewFormContext.Provider value={state}>
-        <SelectField name="test" />
-      </InterviewFormContext.Provider>
-    </Box>
-  )
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <SelectField {...args} state={state} required />
+      </Box>
+    )
+  },
 }

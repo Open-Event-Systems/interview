@@ -1,3 +1,4 @@
+import { FieldProps } from "#src/types.js"
 import {
   createStyles,
   DefaultProps,
@@ -6,15 +7,14 @@ import {
   TextInputProps,
   useComponentDefaultProps,
 } from "@mantine/core"
+import { ScalarFieldState } from "@open-event-systems/interview-lib"
+import { action } from "mobx"
 import { observer } from "mobx-react-lite"
-import { useContext } from "react"
-import { InterviewFormContext } from "#src/components/form/Form.js"
 
-const textStyles = createStyles(() => ({ root: {} }))
+const useStyles = createStyles(() => ({ root: {} }))
 
-export type TextFieldProps = {
-  name: string
-} & DefaultProps<Selectors<typeof textStyles>> &
+export type TextFieldProps = FieldProps &
+  DefaultProps<Selectors<typeof useStyles>> &
   Omit<
     TextInputProps,
     "name" | "error" | "value" | "onChange" | "onBlur" | "styles"
@@ -24,43 +24,40 @@ export type TextFieldProps = {
  * Component for a text field.
  */
 export const TextField = observer((props: TextFieldProps) => {
-  const { name, className, classNames, styles, unstyled, ...other } =
+  const { className, classNames, styles, unstyled, required, ...other } =
     useComponentDefaultProps("OESITextField", {}, props)
-  const { cx, classes } = textStyles(undefined, {
+  const { cx, classes } = useStyles(undefined, {
     name: "OESITextField",
     classNames,
     styles,
     unstyled,
   })
 
-  const formState = useContext(InterviewFormContext)
-  const state = formState?.fields[name]
-  if (!formState || !state) {
-    return null
-  }
+  const state = props.state as ScalarFieldState
 
   const value = state.value != null ? state.value.toString() : ""
-  const errorMessage = state.showError ? state.error : undefined
-  const autoComplete = state.fieldInfo.autocomplete ?? undefined
-  const inputMode = state.fieldInfo.input_mode ?? undefined
+  const error = !state.isValid && state.touched
+  const errorMessage = error ? state.errors[0].message : undefined
+  const autoComplete = state.schema["x-autocomplete"] ?? undefined
+  const inputMode = state.schema["x-input-mode"] ?? undefined
 
   return (
     <TextInput
       className={cx(className, classes.root)}
-      label={state.fieldInfo.label || undefined}
-      required={!state.fieldInfo.optional}
-      withAsterisk={!state.fieldInfo.optional}
-      autoComplete={autoComplete}
+      label={state.schema.title || undefined}
+      required={required}
+      withAsterisk={required}
+      autoComplete={autoComplete as TextFieldProps["autoComplete"]}
       inputMode={inputMode as TextFieldProps["inputMode"]}
       {...other}
       error={errorMessage}
       value={value}
-      onChange={(e) => {
-        state.handleChange(e.target.value)
-      }}
-      onBlur={() => {
-        state.handleTouch()
-      }}
+      onChange={action((e) => {
+        state.value = e.target.value
+      })}
+      onBlur={action(() => {
+        state.touched = true
+      })}
     />
   )
 })

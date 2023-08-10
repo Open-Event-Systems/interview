@@ -9,6 +9,16 @@ from oes.interview.variables.proxy import MappingProxy, SequenceProxy, _make_pro
 class Undefined(jinja2.StrictUndefined):
     """Custom :class:`jinja2.Undefined` instance to raise a custom UndefinedError."""
 
+    # def __getstate__(self) -> dict:
+    #     return {
+    #         "_undefined_obj": self._undefined_obj,
+    #         "_undefined_name": self._undefined_name
+    #     }
+    #
+    # def __setstate__(self, state: dict):
+    #     self._undefined_obj = state["_undefined_obj"]
+    #     self._undefined_name = state["_undefined_name"]
+
     def _fail_with_undefined_error(self, *args, **kwargs):
         obj = self._undefined_obj
         name = self._undefined_name

@@ -1,25 +1,36 @@
 import {
+  Box,
+  BoxProps,
   Button,
   ButtonProps,
   createStyles,
   DefaultProps,
-  Grid,
-  GridProps,
   Selectors,
-  Stack,
-  StackProps,
   useComponentDefaultProps,
 } from "@mantine/core"
 import { ExitResult } from "@open-event-systems/interview-lib"
 import { Markdown } from "#src/components/Markdown.js"
 
-const exitStyles = createStyles({
-  root: {},
-  markdown: {
-    flex: "auto",
+const exitStyles = createStyles((theme) => ({
+  root: {
+    display: "grid",
+    grid: `
+      "description" auto
+      "." 1fr
+      "button" auto
+      / 1fr
+    `,
+    justifyItems: "stretch",
+    rowGap: theme.spacing.sm,
   },
-  button: {},
-})
+  markdown: {
+    gridArea: "description",
+  },
+  button: {
+    justifySelf: "end",
+    gridArea: "button",
+  },
+}))
 
 export type ExitViewProps = {
   /**
@@ -33,20 +44,11 @@ export type ExitViewProps = {
   onClose?: () => void
 
   /**
-   * Props passed to the Stack component.
-   */
-  stackProps?: Partial<StackProps>
-
-  /**
-   * Props passed to the Grid component.
-   */
-  gridProps?: Partial<GridProps>
-
-  /**
    * Props passed to the close/exit button.
    */
-  buttonProps?: Partial<ButtonProps>
-} & DefaultProps<Selectors<typeof exitStyles>>
+  ButtonProps?: Partial<ButtonProps>
+} & BoxProps &
+  DefaultProps<Selectors<typeof exitStyles>>
 
 /**
  * Display the content for a {@link ExitResult}.
@@ -59,9 +61,7 @@ export const ExitView = (props: ExitViewProps) => {
     classNames,
     content,
     onClose,
-    stackProps,
-    gridProps,
-    buttonProps,
+    ButtonProps,
     ...other
   } = useComponentDefaultProps("OESIExitView", {}, props)
 
@@ -73,22 +73,18 @@ export const ExitView = (props: ExitViewProps) => {
   })
 
   return (
-    <Stack className={cx(classes.root, className)} {...stackProps} {...other}>
+    <Box className={cx(classes.root, className)} {...other}>
       <Markdown className={classes.markdown}>
         {content.description || ""}
       </Markdown>
-      <Grid justify="flex-end" {...gridProps}>
-        <Grid.Col span="content">
-          <Button
-            variant="outline"
-            className={classes.button}
-            {...buttonProps}
-            onClick={() => onClose && onClose()}
-          >
-            Close
-          </Button>
-        </Grid.Col>
-      </Grid>
-    </Stack>
+      <Button
+        variant="outline"
+        className={classes.button}
+        {...ButtonProps}
+        onClick={() => onClose && onClose()}
+      >
+        Close
+      </Button>
+    </Box>
   )
 }

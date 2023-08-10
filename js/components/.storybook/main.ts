@@ -24,6 +24,7 @@ const config: StorybookConfig = {
           ...(config.module?.rules ?? []),
           {
             include: [path.resolve("../lib")],
+            exclude: /node_modules/,
             use: [
               {
                 loader: "babel-loader",

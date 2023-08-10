@@ -1,12 +1,9 @@
 import pytest
 from cattrs import BaseValidationError
-from cattrs.preconf.json import make_converter
 from oes.interview.input.field_types.button import Button, ButtonOption
 from oes.interview.input.response import create_response_parser
 from oes.interview.variables.locator import parse_locator
 from oes.template import Template
-
-converter = make_converter()
 
 field1 = Button(
     set=parse_locator("option"),
@@ -86,7 +83,7 @@ def test_button_schema_ids():
     ),
 )
 def test_parse_button(val, expected):
-    parser = create_response_parser("test", [field1], converter)
+    parser = create_response_parser("test", [field1])
 
     result = parser({"field_0": val})
     assert result == {parse_locator("option"): expected}
@@ -100,7 +97,7 @@ def test_parse_button(val, expected):
     ),
 )
 def test_parse_button_ids(val, expected):
-    parser = create_response_parser("test", [field2], converter)
+    parser = create_response_parser("test", [field2])
 
     result = parser({"field_0": val})
     assert result == {parse_locator("option"): expected}
@@ -118,7 +115,7 @@ def test_parse_button_ids(val, expected):
     ),
 )
 def test_parse_button_invalid(val):
-    parser = create_response_parser("test", [field1], converter)
+    parser = create_response_parser("test", [field1])
 
     with pytest.raises(BaseValidationError):
         parser({"field_0": val})

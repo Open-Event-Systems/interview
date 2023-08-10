@@ -1,24 +1,29 @@
 import {
+  Box,
+  BoxProps,
   createStyles,
   DefaultProps,
-  Grid,
-  GridProps,
   Selectors,
   useComponentDefaultProps,
 } from "@mantine/core"
-import { AskField } from "@open-event-systems/interview-lib"
 import { observer } from "mobx-react-lite"
-import { Field } from "#src/components/fields/Field.js"
+import { useContext } from "react"
+import { InterviewFormContext } from "#src/components/form/Form.js"
+import { ObjectField } from "#src/components/fields/ObjectField.js"
 
-const questionFieldsStyles = createStyles({ root: {} })
+const questionFieldsStyles = createStyles((theme) => ({
+  root: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    rowGap: theme.spacing.sm,
+  },
+  item: {},
+}))
 
-export type QuestionFieldsProps = {
-  /**
-   * An object mapping names to {@link AskField} objects to show.
-   */
-  fields: Record<string, AskField>
-} & DefaultProps<Selectors<typeof questionFieldsStyles>> &
-  Omit<GridProps, "children">
+export type QuestionFieldsProps = DefaultProps<
+  Selectors<typeof questionFieldsStyles>
+> &
+  Omit<BoxProps, "children">
 
 /**
  * Displays the input fields for a question.
@@ -26,8 +31,10 @@ export type QuestionFieldsProps = {
  * Must have a {@link InterviewFormContext} available.
  */
 export const QuestionFields = observer((props: QuestionFieldsProps) => {
-  const { styles, unstyled, className, classNames, fields, ...other } =
+  const { styles, unstyled, className, classNames, ...other } =
     useComponentDefaultProps("OESIQuestionFields", {}, props)
+
+  const form = useContext(InterviewFormContext)
 
   const { classes, cx } = questionFieldsStyles(undefined, {
     name: "OESIQuestionFields",
@@ -36,13 +43,21 @@ export const QuestionFields = observer((props: QuestionFieldsProps) => {
     unstyled,
   })
 
+  if (!form) {
+    return
+  }
+
   return (
-    <Grid className={cx(classes.root, className)} {...other}>
-      {Object.keys(fields).map((name) => (
-        <Grid.Col key={name} xs={12}>
-          <Field name={name} />
-        </Grid.Col>
-      ))}
-    </Grid>
+    <Box className={cx(classes.root, className)} {...other}>
+      <ObjectField
+        state={form.fieldState}
+        renderField={(name, child) => (
+          <Box key={name} className={classes.item}>
+            {child}
+          </Box>
+        )}
+        required
+      />
+    </Box>
   )
 })

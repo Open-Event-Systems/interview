@@ -6,7 +6,11 @@ import {
   StackProps,
   useComponentDefaultProps,
 } from "@mantine/core"
-import { AskResult, FormValues } from "@open-event-systems/interview-lib"
+import {
+  AskResult,
+  FormValues,
+  Schema,
+} from "@open-event-systems/interview-lib"
 import { InterviewForm } from "#src/components/form/Form.js"
 import {
   FormButtons,
@@ -18,20 +22,29 @@ import {
 } from "#src/components/form/QuestionFields.js"
 import { Markdown } from "#src/components/Markdown.js"
 
-const questionStyles = createStyles({
+const questionStyles = createStyles((theme) => ({
   root: {
-    display: "flex",
-    alignItems: "stretch",
+    display: "grid",
+    grid: `
+      "description" auto
+      "fields" auto
+      "." 1fr
+      "buttons" auto
+      / 1fr
+    `,
+    justifyItems: "stretch",
+    rowGap: theme.spacing.sm,
   },
-  stack: {
-    flex: "auto",
+  markdown: {
+    gridArea: "description",
   },
-  markdown: {},
   questionFields: {
-    flex: "auto",
+    gridArea: "fields",
   },
-  buttons: {},
-})
+  buttons: {
+    gridArea: "buttons",
+  },
+}))
 
 export type QuestionViewProps = {
   /**
@@ -40,24 +53,24 @@ export type QuestionViewProps = {
   content: AskResult
 
   /**
-   * Props passed to the Stack component.
+   * Initial values.
    */
-  stackProps?: Partial<StackProps>
+  initialValues?: FormValues
 
   /**
    * Props passed to the {@link QuestionFields} component.
    */
-  questionFieldsProps?: Partial<QuestionFieldsProps>
+  QuestionFieldsProps?: Partial<QuestionFieldsProps>
 
   /**
    * Props passed to the {@link FormButtons} component.
    */
-  formButtonsProps?: Partial<FormButtonsProps>
+  FormButtonsProps?: Partial<FormButtonsProps>
 
   /**
    * The submit handler for the form.
    */
-  onSubmit: (values: FormValues, button: number | null) => Promise<void>
+  onSubmit: (values: FormValues) => Promise<void>
 } & DefaultProps<Selectors<typeof questionStyles>>
 
 /**
@@ -70,9 +83,9 @@ export const QuestionView = (props: QuestionViewProps) => {
     className,
     classNames,
     content,
-    stackProps,
-    questionFieldsProps,
-    formButtonsProps,
+    initialValues,
+    QuestionFieldsProps,
+    FormButtonsProps,
     onSubmit,
     ...other
   } = useComponentDefaultProps("OESIQuestionView", {}, props)
@@ -84,29 +97,24 @@ export const QuestionView = (props: QuestionViewProps) => {
     classNames,
   })
 
+  const schema = content.schema as Schema
+
   return (
     <InterviewForm
       className={cx(classes.root, className)}
+      schema={schema}
+      initialValues={initialValues}
       {...other}
-      fields={content.fields}
       onSubmit={onSubmit}
     >
-      <Stack className={classes.stack} {...stackProps}>
-        <Markdown className={classes.markdown}>
-          {content.description || ""}
-        </Markdown>
-        <QuestionFields
-          className={classes.questionFields}
-          {...questionFieldsProps}
-          fields={content.fields}
-        />
-        <FormButtons
-          className={classes.buttons}
-          justify="flex-end"
-          {...formButtonsProps}
-          buttons={content.buttons}
-        />
-      </Stack>
+      <Markdown className={classes.markdown}>
+        {schema.description || ""}
+      </Markdown>
+      <QuestionFields
+        className={classes.questionFields}
+        {...QuestionFieldsProps}
+      />
+      <FormButtons className={classes.buttons} {...FormButtonsProps} />
     </InterviewForm>
   )
 }

@@ -6,33 +6,35 @@ import {
   useComponentDefaultProps,
 } from "@mantine/core"
 import {
-  AskField,
-  Button,
-  FormState,
+  createState,
+  FieldState,
   FormValues,
+  Schema,
 } from "@open-event-systems/interview-lib"
 import { action, runInAction } from "mobx"
 import { observer, useLocalObservable } from "mobx-react-lite"
-import { createContext, FormHTMLAttributes, ReactNode } from "react"
+import {
+  createContext,
+  FormHTMLAttributes,
+  ReactNode,
+  useCallback,
+} from "react"
 
 const formStyles = createStyles(() => ({
-  root: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
+  root: {},
 }))
+
+export interface InterviewFormState {
+  submitting: boolean
+  fieldState: FieldState
+  formEl: HTMLFormElement | null
+}
 
 export type InterviewFormProps = {
   /**
-   * An object mapping field names to {@link AskField} objects.
+   * The question schema.
    */
-  fields: Record<string, AskField>
-
-  /**
-   * An array of custom submit buttons for the form.
-   */
-  buttons?: Button[]
+  schema: Schema
 
   /**
    * An object of initial values for the fields.
@@ -42,7 +44,7 @@ export type InterviewFormProps = {
   /**
    * The submit handler.
    */
-  onSubmit: (values: FormValues, button: number | null) => Promise<void>
+  onSubmit: (values: FormValues) => Promise<void>
 
   children?: ReactNode
 } & DefaultProps<Selectors<typeof formStyles>> &
@@ -61,8 +63,7 @@ export const InterviewForm = observer((props: InterviewFormProps) => {
     unstyled,
     className,
     classNames,
-    fields,
-    buttons,
+    schema,
     initialValues,
     onSubmit,
     children,
@@ -76,24 +77,37 @@ export const InterviewForm = observer((props: InterviewFormProps) => {
     unstyled,
   })
 
-  const state = useLocalObservable(() =>
-    FormState.create(fields, buttons, initialValues)
+  const state = useLocalObservable((): InterviewFormState => {
+    const fieldState = createState(schema)
+
+    fieldState.value = initialValues ?? {}
+
+    return {
+      submitting: false,
+      fieldState,
+      formEl: null as HTMLFormElement | null,
+    }
+  })
+
+  const setRef = useCallback(
+    action((ref: HTMLFormElement | null) => {
+      state.formEl = ref
+    }),
+    [state],
   )
 
   const handleSubmit = action(async () => {
-    // set all fields to touched
-    for (const key of Object.keys(state.fields)) {
-      state.fields[key].touched = true
-    }
+    // set state to touched
+    state.fieldState.touched = true
 
-    if (state.submitting || !state.isValid) {
+    if (state.submitting || !state.fieldState.isValid) {
       return
     }
 
     state.submitting = true
 
     try {
-      await onSubmit(state.validValues, state.selectedButton)
+      await onSubmit(state.fieldState.validValue as FormValues)
     } catch (_e) {
       runInAction(() => {
         state.submitting = false
@@ -110,9 +124,7 @@ export const InterviewForm = observer((props: InterviewFormProps) => {
         e.preventDefault()
         handleSubmit()
       }}
-      ref={action((el: HTMLFormElement | null) => {
-        state.formEl = el
-      })}
+      ref={setRef}
     >
       <InterviewFormContext.Provider value={state}>
         {children}
@@ -123,4 +135,6 @@ export const InterviewForm = observer((props: InterviewFormProps) => {
 
 InterviewForm.displayName = "InterviewForm"
 
-export const InterviewFormContext = createContext<FormState | null>(null)
+export const InterviewFormContext = createContext<InterviewFormState | null>(
+  null,
+)

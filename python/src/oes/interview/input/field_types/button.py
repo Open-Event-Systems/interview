@@ -3,9 +3,10 @@ from collections.abc import Sequence
 from typing import Any, Literal, Mapping, Optional
 
 import attr
-from attrs import frozen
+from attrs import frozen, validators
 from oes.interview.input.field import BaseOptionsField
-from oes.interview.input.types import FieldWithType, Locator, Option
+from oes.interview.input.types import FieldWithType, Option
+from oes.interview.variables.locator import Locator
 from oes.template import Context, Template
 
 
@@ -73,4 +74,5 @@ class Button(BaseOptionsField[ButtonOption], FieldWithType):
         return attr.ib(
             type=Any,
             converter=self.convert_option,
+            validator=validators.not_(validators.instance_of(type(None))),
         )

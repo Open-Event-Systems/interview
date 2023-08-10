@@ -1,61 +1,21 @@
-"""Steps."""
+"""Specific step types."""
+from __future__ import annotations
+
 import copy
-from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Literal, Optional, Union
 
-from attrs import evolve, frozen
-from oes.interview.input.question import get_question_schema
-from oes.interview.input.response import get_field_names
-from oes.interview.input.types import Locator, Whenable
-from oes.interview.interview.interview import Interview
-from oes.interview.state.state import InterviewState
-from oes.interview.variables.locator import UndefinedError
+from attrs import frozen
+from cattrs import Converter
+from oes.interview.input.logic import evaluate_whenable
+from oes.interview.interview.error import InterviewError
+from oes.interview.interview.interview import Step, StepResult
+from oes.interview.interview.result import AskResult, ExitResult
+from oes.interview.interview.state import InterviewState
+from oes.interview.variables.locator import Locator, UndefinedError
 from oes.interview.variables.undefined import Undefined
 from oes.template import Context, Expression, Template, ValueOrEvaluable, evaluate
-from typing_extensions import Protocol
-
-
-@frozen(kw_only=True)
-class AskResult:
-    """A result asking a question."""
-
-    type: Literal["question"] = "question"
-    schema: Mapping[str, object]
-
-
-@frozen(kw_only=True)
-class ExitResult:
-    """An exit result."""
-
-    type: Literal["exit"] = "exit"
-    title: str
-    description: Optional[str] = None
-
-
-@frozen
-class StepResult:
-    """The result of a step."""
-
-    state: InterviewState
-    """The updated :class:`InterviewState`."""
-
-    changed: bool
-    """Whether a change was made."""
-
-    content: object = None
-    """Result content."""
-
-
-class Step(Whenable, Protocol):
-    """Abstract step."""
-
-    @abstractmethod
-    async def __call__(
-        self, __interview: Interview, __state: InterviewState
-    ) -> StepResult:
-        """Handle the step."""
-        ...
+from oes.util import merge_dict
 
 
 @frozen
@@ -68,24 +28,18 @@ class AskStep(Step):
     when: Union[ValueOrEvaluable, Sequence[ValueOrEvaluable]] = ()
     """``when`` conditions."""
 
-    async def __call__(self, interview: Interview, state: InterviewState) -> StepResult:
+    async def __call__(self, state: InterviewState) -> StepResult:
         # skip if the question was already asked
         if self.ask in state.answered_question_ids:
             return StepResult(state, changed=False)
 
-        question = interview.question_bank[self.ask]
-        schema = get_question_schema(
-            question.title,
-            question.description,
-            get_field_names(question.fields),
-            state.template_context,
-        )
+        question = state.interview.questions_by_id.get(self.ask)
+        if question is None:
+            raise InterviewError(f"Question ID not found: {self.ask}")
 
-        updated = evolve(
-            state,
-            question_id=question.id,
-            answered_question_ids=state.answered_question_ids | {question.id},
-        )
+        schema = question.get_schema(state.template_context)
+
+        updated = state.set_question(question.id)
 
         return StepResult(
             state=updated,
@@ -107,21 +61,18 @@ class SetStep(Step):
     when: Union[ValueOrEvaluable, Sequence[ValueOrEvaluable]] = ()
     """``when`` conditions."""
 
-    async def __call__(self, interview: Interview, state: InterviewState) -> StepResult:
+    async def __call__(self, state: InterviewState) -> StepResult:
         ctx = state.template_context
         is_set, cur_val = self._get_value(state.template_context)
 
         val = self.value.evaluate(ctx)
 
         if val != cur_val:
-            new_data = dict(copy.deepcopy(state.data))
+            new_data = merge_dict({}, copy.deepcopy(state.data))
             self.set.set(val, new_data)
 
             changed = True
-            updated_state = evolve(
-                state,
-                data=new_data,
-            )
+            updated_state = state.set_data(new_data)
         else:
             changed = False
             updated_state = state
@@ -151,13 +102,16 @@ class EvalStep(Step):
     when: Union[ValueOrEvaluable, Sequence[ValueOrEvaluable]] = ()
     """``when`` conditions."""
 
-    async def __call__(self, interview: Interview, state: InterviewState) -> StepResult:
+    async def __call__(self, state: InterviewState) -> StepResult:
         ctx = state.template_context
+
+        # call __bool__ just to raise an exception for undefined values
+
         if isinstance(self.eval, Sequence) and not isinstance(self.eval, str):
             for item in self.eval:
-                evaluate(item, ctx)
+                bool(evaluate(item, ctx))
         else:
-            evaluate(self.eval, ctx)
+            bool(evaluate(self.eval, ctx))
 
         return StepResult(
             state=state,
@@ -178,14 +132,64 @@ class ExitStep(Step):
     when: Union[ValueOrEvaluable, Sequence[ValueOrEvaluable]] = ()
     """``when`` conditions."""
 
-    async def __call__(self, interview: Interview, state: InterviewState) -> StepResult:
+    async def __call__(self, state: InterviewState) -> StepResult:
+        ctx = state.template_context
         return StepResult(
             state=state,
             changed=True,
             content=ExitResult(
-                title=self.exit.render(state.template_context),
-                description=self.description.render(state.template_context)
-                if self.description
-                else None,
+                title=self.exit.render(ctx),
+                description=self.description.render(ctx) if self.description else None,
             ),
         )
+
+
+@frozen
+class Block(Step):
+    """A block of steps."""
+
+    block: Sequence[Step]
+
+    when: Union[ValueOrEvaluable, Sequence[ValueOrEvaluable]] = ()
+    """``when`` conditions."""
+
+    async def __call__(self, state: InterviewState) -> StepResult:
+        return await handle_steps(state, self.block)
+
+
+async def handle_steps(state: InterviewState, steps: Iterable[Step]) -> StepResult:
+    """Handle interview steps."""
+    ctx = state.template_context
+    for step in steps:
+        if evaluate_whenable(step, ctx):
+            result = await step(state)
+            if result.changed:
+                return result
+
+    return StepResult(state, changed=False)
+
+
+def structure_step(converter: Converter, v: object, t: object) -> Step:
+    """Structure a :class:`Step`."""
+    if isinstance(v, Mapping):
+        step_cls = _get_step(v)
+        if step_cls is not None:
+            return converter.structure(v, step_cls)
+
+    raise TypeError(f"Invalid step: {v}")
+
+
+_step_map = {
+    "ask": AskStep,
+    "block": Block,
+    "set": SetStep,
+    "eval": EvalStep,
+    "exit": ExitStep,
+}
+
+
+def _get_step(v: Mapping) -> Optional[type]:
+    for k, cls in _step_map.items():
+        if k in v:
+            return cls
+    return None

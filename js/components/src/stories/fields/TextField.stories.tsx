@@ -1,34 +1,57 @@
-import { AskResult, FormState } from "@open-event-systems/interview-lib"
 import { TextField } from "#src/components/fields/TextField.js"
 import { useState } from "react"
-import { InterviewFormContext } from "#src/components/form/Form.js"
 import { Box } from "@mantine/core"
+import { Meta, StoryObj } from "@storybook/react"
+import { createState } from "@open-event-systems/interview-lib"
 
 export default {
   component: TextField,
+} as Meta<typeof TextField>
+
+const schema = {
+  type: "string",
+  "x-type": "text",
+  title: "Text Input",
+  description: "Example text input",
+  minLength: 2,
+  maxLength: 16,
+  pattern: "^[abcd]+$",
 }
 
-const result: AskResult = {
-  type: "question",
-  title: "Test",
-  description: "",
-  fields: {
-    test: {
-      type: "text",
-      label: "Test Field",
-      min: 0,
-      max: 10,
-    },
+const emailSchema = {
+  type: "string",
+  "x-type": "text",
+  title: "Email",
+  description: "Example text input",
+  format: "email",
+}
+
+export const Default: StoryObj<typeof TextField> = {
+  args: {
+    required: true,
+  },
+  render(args) {
+    const [state] = useState(() => createState(schema))
+
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <TextField {...args} state={state} />
+      </Box>
+    )
   },
 }
 
-export const Default = () => {
-  const [formState] = useState(() => FormState.create(result.fields))
-  return (
-    <Box sx={{ maxWidth: 300 }}>
-      <InterviewFormContext.Provider value={formState}>
-        <TextField name="test" />
-      </InterviewFormContext.Provider>
-    </Box>
-  )
+export const Email: StoryObj<typeof TextField> = {
+  args: {
+    required: true,
+  },
+  render(args) {
+    const [state] = useState(() => createState(emailSchema))
+
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <TextField {...args} state={state} />
+      </Box>
+    )
+  },
 }

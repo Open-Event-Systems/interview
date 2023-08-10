@@ -1,6 +1,10 @@
 import type { Preview } from "@storybook/react"
 import React from "react"
-import { DEFAULT_THEME, MantineProvider } from "@mantine/core"
+import {
+  DEFAULT_THEME,
+  MantineProvider,
+  TypographyStylesProvider,
+} from "@mantine/core"
 
 const preview: Preview = {
   parameters: {
@@ -15,7 +19,9 @@ const preview: Preview = {
   decorators: [
     (Story) => (
       <MantineProvider theme={DEFAULT_THEME} withGlobalStyles withNormalizeCSS>
-        <Story />
+        <TypographyStylesProvider>
+          <Story />
+        </TypographyStylesProvider>
       </MantineProvider>
     ),
   ],

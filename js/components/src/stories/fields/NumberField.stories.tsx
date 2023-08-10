@@ -1,35 +1,31 @@
-import { AskResult, FormState } from "@open-event-systems/interview-lib"
 import { useState } from "react"
-import { InterviewFormContext } from "#src/components/form/Form.js"
 import { Box } from "@mantine/core"
 import { NumberField } from "#src/components/fields/NumberField.js"
+import { Meta, StoryObj } from "@storybook/react"
+import { createState } from "@open-event-systems/interview-lib"
 
 export default {
   component: NumberField,
+} as Meta<typeof NumberField>
+
+const schema = {
+  type: "integer",
+  "x-type": "number",
+  title: "Number Input",
+  description: "Example number input",
+  minimum: 1,
+  maximum: 10,
+  nullable: true,
 }
 
-const result: AskResult = {
-  type: "question",
-  title: "Test",
-  description: "",
-  fields: {
-    test: {
-      type: "number",
-      label: "Test Field",
-      min: 0,
-      max: 10,
-      integer: true,
-    },
+export const Default: StoryObj<typeof NumberField> = {
+  render(args) {
+    const [state] = useState(() => createState(schema))
+
+    return (
+      <Box sx={{ maxWidth: 300 }}>
+        <NumberField {...args} state={state} required={false} />
+      </Box>
+    )
   },
-}
-
-export const Default = () => {
-  const [formState] = useState(() => FormState.create(result.fields))
-  return (
-    <Box sx={{ maxWidth: 300 }}>
-      <InterviewFormContext.Provider value={formState}>
-        <NumberField name="test" />
-      </InterviewFormContext.Provider>
-    </Box>
-  )
 }

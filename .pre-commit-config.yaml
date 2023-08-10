@@ -36,19 +36,19 @@ repos:
           - json
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.45.0
+    rev: v8.46.0
     hooks:
       - id: eslint
         files: \.[jt]sx?$
         types: [file]
         additional_dependencies:
-          - eslint@8.34.0
+          - eslint
           - "@typescript-eslint/parser"
           - "@typescript-eslint/eslint-plugin"
           - eslint-plugin-react
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
       - id: flake8
         additional_dependencies:

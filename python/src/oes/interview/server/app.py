@@ -1,0 +1,76 @@
+"""ASGI application module."""
+import copy
+from collections.abc import Awaitable, Callable
+
+from blacksheep import Application, Request, Response, Router
+from guardpost import Policy
+from guardpost.asynchronous.authentication import AuthenticationStrategy
+from guardpost.asynchronous.authorization import AuthorizationStrategy
+from oes.interview.config.interview import InterviewConfig
+from oes.interview.serialization import converter, json_default
+from oes.interview.server.auth import APIKeyHandler
+from oes.interview.server.docs import docs
+from oes.interview.server.settings import Settings
+from oes.interview.variables.env import jinja2_env
+from oes.template import set_jinja2_env
+from oes.util.blacksheep import (
+    AttrsBinder,
+    JSONResponseFunc,
+    configure_cors,
+    configure_forwarded_headers,
+)
+
+router = Router()
+"""The router."""
+
+json_response = JSONResponseFunc(default=json_default)
+"""JSON response function."""
+
+AttrsBinder.cattrs_converter = converter
+
+
+async def _set_jinja2_env(
+    request: Request, handler: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    with set_jinja2_env(jinja2_env):
+        return await handler(request)
+
+
+def make_app(settings: Settings, interview_config: InterviewConfig) -> Application:
+    """Return the ASGI app."""
+    import oes.interview.server.views  # noqa
+
+    router_copy = copy.deepcopy(router)
+
+    app = Application(router=router_copy)
+
+    # auth
+
+    app.use_authentication(AuthenticationStrategy()).add(
+        APIKeyHandler(settings.api_key)
+    )
+
+    authorization = AuthorizationStrategy()
+    policy = Policy("authenticated")
+    authorization.add(policy)
+    authorization.default_policy = policy
+
+    app.use_authorization(authorization)
+
+    # services
+
+    app.services.add_instance(settings)
+    app.services.add_instance(interview_config)
+
+    # middlewares
+    configure_cors(
+        app,
+        allow_origins=settings.allowed_origins,
+    )
+    app.on_middlewares_configuration(configure_forwarded_headers)
+
+    app.middlewares.append(_set_jinja2_env)
+
+    docs.bind_app(app)
+
+    return app

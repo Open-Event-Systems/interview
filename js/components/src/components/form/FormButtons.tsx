@@ -3,15 +3,20 @@ import {
   ButtonProps,
   createStyles,
   DefaultProps,
-  Grid,
-  GridProps,
+  Group,
+  GroupProps,
   Selectors,
   useComponentDefaultProps,
 } from "@mantine/core"
-import { Button as IButton } from "@open-event-systems/interview-lib"
 import { observer } from "mobx-react-lite"
-import { useContext } from "react"
+import { MouseEvent, useContext } from "react"
 import { InterviewFormContext } from "#src/components/form/Form.js"
+import {
+  FieldState,
+  ObjectFieldState,
+  Schema,
+} from "@open-event-systems/interview-lib"
+import { action } from "mobx"
 
 const buttonStyles = createStyles({
   root: {},
@@ -21,22 +26,17 @@ const buttonStyles = createStyles({
 
 export type FormButtonProps = {
   /**
-   * The button ID.
+   * The field state for the button group.
    */
-  buttonId: number
+  state?: FieldState
 
   /**
-   * The button text.
+   * The individual button schema.
    */
-  label: string
+  schema: Schema
 
   /**
-   * Whether the button should be rendered as the primary option.
-   */
-  primary?: boolean
-
-  /**
-   * Whether this button should represent the default submit action.
+   * Override whether this is the default button.
    */
   default?: boolean
 } & DefaultProps<Selectors<typeof buttonStyles>> &
@@ -51,10 +51,9 @@ export const FormButton = observer((props: FormButtonProps) => {
     unstyled,
     className,
     classNames,
-    buttonId,
-    label,
-    primary,
-    default: _default,
+    state,
+    schema,
+    default: default_,
     ...other
   } = useComponentDefaultProps("OESIFormButton", {}, props)
 
@@ -65,34 +64,41 @@ export const FormButton = observer((props: FormButtonProps) => {
     unstyled,
   })
 
+  const isDefault =
+    default_ ||
+    (!!state?.schema.default && schema.const == state.schema.default)
+
   const form = useContext(InterviewFormContext)
 
   return (
     <Button
       className={cx(
         classes.root,
-        _default && classes.default,
-        primary && classes.primary,
-        className
+        isDefault && classes.default,
+        !!schema["x-primary"] && classes.primary,
+        className,
       )}
-      variant={primary ? "filled" : "outline"}
-      disabled={!!form && form?.submitting}
+      variant={schema["x-primary"] ? "filled" : "outline"}
+      disabled={!!form && form.submitting}
       {...other}
-      type={_default ? "submit" : "button"}
-      onClick={(e) => {
-        form?.setButton(buttonId)
+      type={isDefault ? "submit" : "button"}
+      onClick={action((e: MouseEvent) => {
+        if (state) {
+          state.value = schema.const
+        }
+
         const formEl = form?.formEl
 
-        if (!_default) {
+        if (!isDefault) {
           e.preventDefault()
 
           if (formEl) {
             triggerSubmit(formEl)
           }
         }
-      }}
+      })}
     >
-      {label}
+      {schema.title}
     </Button>
   )
 })
@@ -110,35 +116,20 @@ const triggerSubmit = (el: HTMLElement) => {
 }
 
 const buttonsStyles = createStyles({
-  root: {},
+  root: {
+    justifyContent: "flex-end",
+  },
 })
 
-export type FormButtonsProps = {
-  /**
-   * The array of buttons.
-   */
-  buttons?: IButton[]
-} & DefaultProps<Selectors<typeof buttonStyles>> &
-  Omit<GridProps, "children">
+export type FormButtonsProps = DefaultProps<Selectors<typeof buttonStyles>> &
+  Omit<GroupProps, "children">
 
 /**
  * Display the button(s) in an interview question form.
  */
 export const FormButtons = (props: FormButtonsProps) => {
-  const { styles, unstyled, className, classNames, buttons, ...other } =
-    useComponentDefaultProps(
-      "OESIFormButtons",
-      {
-        buttons: [
-          {
-            default: true,
-            label: "Next",
-            primary: true,
-          },
-        ],
-      },
-      props
-    )
+  const { styles, unstyled, className, classNames, ...other } =
+    useComponentDefaultProps("OESIFormButtons", {}, props)
 
   const { classes, cx } = buttonsStyles(undefined, {
     name: "OESIFormButtons",
@@ -147,18 +138,44 @@ export const FormButtons = (props: FormButtonsProps) => {
     classNames,
   })
 
+  const form = useContext(InterviewFormContext)
+  const fieldState = form?.fieldState as ObjectFieldState | undefined
+
+  const fields = form?.fieldState.schema.properties
+  const buttons = fields
+    ? Object.entries(fields).filter(([_k, f]) => f["x-type"] == "button")
+    : []
+
+  const button = buttons[0]
+  const buttonField = button ? button[0] : undefined
+  const buttonSchema = button ? button[1] : undefined
+  const buttonState =
+    buttonField && fieldState?.properties
+      ? fieldState.properties[buttonField]
+      : undefined
+
+  let content
+
+  if (buttonState && buttonSchema) {
+    content = buttonSchema.oneOf?.map((b) => (
+      <FormButton key={`${b.const}`} schema={b} state={buttonState} />
+    ))
+  } else {
+    content = (
+      <FormButton
+        schema={{
+          const: "1",
+          title: "Next",
+          "x-primary": true,
+        }}
+        default
+      />
+    )
+  }
+
   return (
-    <Grid className={cx(classes.root, className)} {...other}>
-      {buttons.map((btn, i) => (
-        <Grid.Col key={i} xs={12} md="content">
-          <FormButton
-            buttonId={i}
-            label={btn.label}
-            primary={btn.primary}
-            default={btn.default}
-          />
-        </Grid.Col>
-      ))}
-    </Grid>
+    <Group className={cx(classes.root, className)} {...other}>
+      {content}
+    </Group>
   )
 }

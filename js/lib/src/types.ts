@@ -1,100 +1,107 @@
 /**
- * AskField types.
+ * Form values type.
  */
-export interface AskFieldBase {
-  type: string
-  optional?: boolean | null
-  default?: unknown | null
-  label?: string | null
-}
+export type FormValues = Record<string, unknown>
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface AskFieldTypes {}
-
-export type AskField = Extract<AskFieldTypes[keyof AskFieldTypes], AskFieldBase>
-
-/**
- * Types that form input values may take.
- */
-export type FormValue =
-  | string
-  | number
-  | boolean
-  | (string | number | boolean)[]
-
-/**
- * Key-value mappings of form inputs.
- */
-export type FormValues = Record<string, FormValue | undefined>
-
-/**
- * Validator function. Returns true and the valid value, or false and an error.
- */
-export type FieldValidator = (
-  value: unknown
-) => [true, FormValue | undefined] | [false, string]
-
-/**
- * Factory function to create a validator function for a field.
- */
-export type FieldValidatorFactory<
-  T extends AskField["type"] = AskField["type"]
-> = (field: AskField & { type: T }) => FieldValidator
-
-/**
- * A button.
- */
-export interface Button {
-  label: string
-  primary: boolean
-  default: boolean
-}
-
-/**
- * The result of an Ask step.
- */
 export interface AskResult {
   type: "question"
-  title?: string | null
-  description?: string | null
-  fields: Record<string, AskField>
-  buttons?: Button[]
+  schema: Record<string, unknown>
 }
 
-/**
- * The result of an Exit step.
- */
 export interface ExitResult {
   type: "exit"
   title: string
   description?: string | null
 }
 
-export interface IncompleteInterviewStateResponse {
+/**
+ * Interview update result content.
+ */
+export type Result = AskResult | ExitResult
+
+export interface IncompleteStateResponse {
   state: string
-  complete?: false
+  complete: false
+  content: Result | null
   update_url: string
-  content: AskResult | ExitResult | null
 }
 
-export interface CompleteInterviewStateResponse {
+export interface CompleteStateResponse {
   state: string
   complete: true
-  target_url: string
+  target_url?: string | null
 }
 
 /**
- * A response body containing an interview state.
+ * The response from an update request.
  */
-export type InterviewStateResponse =
-  | IncompleteInterviewStateResponse
-  | CompleteInterviewStateResponse
+export type StateResponse = IncompleteStateResponse | CompleteStateResponse
 
 /**
- * A request with a completed interview state.
+ * Interface of field types.
+ *
+ * Maps field type strings to JSON data types.
  */
-export interface CompleteInterviewStateRequest {
+export interface FieldTypes {
+  text: string
+  number: number
+  date: string
+  select: string | string[]
+  button: string
+}
+
+/**
+ * Additional schema properties.
+ */
+export interface ExtraSchemaProperties {
+  title?: string
+  description?: string
+  "x-type"?: keyof FieldTypes
+  "x-primary"?: boolean
+  "x-minimum"?: string
+  "x-maximum"?: string
+  "x-component"?: string
+}
+
+/**
+ * Loosely typed version of a JSON schema.
+ */
+export interface Schema extends ExtraSchemaProperties {
+  type?:
+    | "object"
+    | "array"
+    | "string"
+    | "number"
+    | "integer"
+    | "boolean"
+    | "null"
+  properties?: Record<string, Schema>
+  required?: string[]
+  nullable?: boolean
+  const?: unknown
+  items?: Schema
+  oneOf?: Schema[]
+  [key: string]: unknown
+}
+
+export type ValidationError = {
+  path: string
+  message: string
+}
+
+export type ValidationResult = {
+  value: unknown
+  errors: ValidationError[]
+}
+
+export type Validator = (responses: unknown) => ValidationResult
+
+/**
+ * Request body for updating an interview state.
+ */
+export interface StateRequest {
   state: string
+  responses?: Record<string, unknown>
 }
 
 /**

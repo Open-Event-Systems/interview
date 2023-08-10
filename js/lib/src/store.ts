@@ -4,11 +4,11 @@ import wretch from "wretch"
 import {
   FormValues,
   InterviewStateMetadata,
-  InterviewStateResponse,
+  StateResponse,
 } from "#src/types.js"
 
 const SESSION_STORAGE_KEY = "interview-state-v1"
-const MAX_RECORDS = 100
+const MAX_RECORDS = 50
 
 /**
  * Indicates an error with the interview state.
@@ -20,9 +20,9 @@ export class InterviewStateError extends Error {}
  */
 export class InterviewStateRecord {
   constructor(
-    public stateResponse: InterviewStateResponse,
+    public stateResponse: StateResponse,
     public fieldValues: FormValues,
-    public metadata: InterviewStateMetadata
+    public metadata: InterviewStateMetadata,
   ) {}
 
   /**
@@ -80,7 +80,7 @@ export class InterviewStateStore {
     if (objStr) {
       try {
         const obj: {
-          r: InterviewStateResponse
+          r: StateResponse
           v: FormValues
           m: InterviewStateMetadata
         }[] = JSON.parse(objStr)
@@ -89,7 +89,7 @@ export class InterviewStateStore {
           const record = new InterviewStateRecord(
             recordData.r,
             recordData.v,
-            recordData.m
+            recordData.m,
           )
           this.records.set(record.id, record)
         })
@@ -149,7 +149,6 @@ export class InterviewStateStore {
   private async updateState(
     record: InterviewStateRecord,
     responses?: Record<string, unknown>,
-    buttonId?: number
   ): Promise<InterviewStateRecord> {
     const curStateResponse = record.stateResponse
 
@@ -160,7 +159,6 @@ export class InterviewStateStore {
     const body = {
       state: record.stateResponse.state,
       responses: responses,
-      button: buttonId,
     }
 
     // TODO: better error handling
@@ -174,12 +172,12 @@ export class InterviewStateStore {
       .error(422, () => {
         throw new InterviewStateError()
       })
-      .json<InterviewStateResponse>()
+      .json<StateResponse>()
 
     const newRecord = new InterviewStateRecord(
       res,
       {},
-      Object.assign({}, record.metadata)
+      Object.assign({}, record.metadata),
     )
     this.saveRecord(newRecord)
     return newRecord
@@ -194,7 +192,7 @@ export class InterviewStateStore {
    * @returns A state record that is complete, or has content.
    */
   private async advanceState(
-    record: InterviewStateRecord
+    record: InterviewStateRecord,
   ): Promise<InterviewStateRecord> {
     let curRecord = record
     while (
@@ -213,13 +211,13 @@ export class InterviewStateStore {
    * @returns The next state record.
    */
   async startInterview(
-    response: InterviewStateResponse,
-    metadata?: InterviewStateMetadata
+    response: StateResponse,
+    metadata?: InterviewStateMetadata,
   ): Promise<InterviewStateRecord> {
     const record = new InterviewStateRecord(
       response,
       {},
-      Object.assign({}, metadata) ?? {}
+      Object.assign({}, metadata),
     )
     this.saveRecord(record)
 
@@ -232,15 +230,13 @@ export class InterviewStateStore {
    * Update the interview process.
    * @param record - The current interview state.
    * @param responses - The user's responses.
-   * @param buttonId - The button ID.
    * @returns The next state record.
    */
   async updateInterview(
     record: InterviewStateRecord,
     responses?: Record<string, unknown>,
-    buttonId?: number
   ): Promise<InterviewStateRecord> {
-    const updated = await this.updateState(record, responses, buttonId)
+    const updated = await this.updateState(record, responses)
     const withContent = await this.advanceState(updated)
     return withContent
   }

@@ -4,8 +4,8 @@ from cattrs.preconf.json import make_converter
 from importlib_metadata import EntryPoint
 from oes.interview.input.field import get_class_for_field_type, structure_field
 from oes.interview.input.field_types.text import TextField
-from oes.interview.input.types import Field, Locator
-from oes.interview.variables.locator import parse_locator
+from oes.interview.input.types import Field
+from oes.interview.variables.locator import Locator, parse_locator
 from oes.template import Template, structure_template
 
 converter = make_converter()
@@ -37,7 +37,7 @@ def test_get_class_for_field_type(mock):
     assert res is _Nested.func
 
 
-def test_structure_config():
+def test_structure_field():
     config = {
         "type": "text",
         "set": "name",

@@ -1,13 +1,15 @@
 import { InterviewStateRecord, InterviewStateStore } from "#src/store.js"
-import { IncompleteInterviewStateResponse } from "#src/types.js"
+import { IncompleteStateResponse } from "#src/types.js"
 
-const response1: IncompleteInterviewStateResponse = {
+const response1: IncompleteStateResponse = {
+  complete: false,
   content: null,
   state: "foo",
   update_url: "",
 }
 
-const response2: IncompleteInterviewStateResponse = {
+const response2: IncompleteStateResponse = {
+  complete: false,
   content: null,
   state: "bar",
   update_url: "",
@@ -23,7 +25,7 @@ test("interview state generates IDs", () => {
 test("state store loads records", () => {
   window.sessionStorage.setItem(
     "interview-state-v1",
-    '[{"r": {"content": null, "state": "foo", "update_url": "x"}, "v": {"a": "b"}, "m": {"x": 1}}]'
+    '[{"r": {"content": null, "state": "foo", "update_url": "x"}, "v": {"a": "b"}, "m": {"x": 1}}]',
   )
   const store = new InterviewStateStore()
   const record = store.getRecord("foo")

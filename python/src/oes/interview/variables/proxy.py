@@ -2,8 +2,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Iterator, TypeVar, Union, cast, overload
 
-from oes.interview.input.types import Locator
-from oes.interview.variables.locator import Index
+from oes.interview.variables.locator import Index, Locator
 
 _K = TypeVar("_K", str, int)
 _V = TypeVar("_V")

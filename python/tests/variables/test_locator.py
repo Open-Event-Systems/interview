@@ -146,3 +146,24 @@ def test_locator_compare(a, b, expected):
     }
 
     assert a.compare(b, doc) == expected
+
+
+@pytest.mark.parametrize(
+    "val",
+    (
+        "a",
+        "a.b",
+        'a["b"]',
+        'a["an \\"escaped\\" string"]',
+        'a["b-c"]',
+        "a[0]",
+        'a[1][2].b[c].d[ "e"]',
+    ),
+)
+def test_str_can_be_parsed(val):
+    loc = parse_locator(val)
+    as_str = str(loc)
+    parsed = parse_locator(as_str)
+    assert loc == parsed
+    new_str = str(parsed)
+    assert as_str == new_str
