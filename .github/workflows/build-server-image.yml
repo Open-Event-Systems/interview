@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - python/**
+    branches:
+      - main
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,8 +19,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4.6.0
+        with:
+          images: ghcr.io/open-event-systems/interview-server
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main'  }}
+
       - uses: docker/build-push-action@v4.1.1
         with:
           context: python
           push: true
-          tags: ghcr.io/open-event-systems/interview-server:latest
+          tags: ${{ steps.meta.outputs.tags }}
