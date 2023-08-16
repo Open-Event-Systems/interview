@@ -1,10 +1,10 @@
-name: Build container image
+name: Build dev container image
 on:
   push:
     paths:
       - python/**
     branches:
-      - main
+      - dev
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
         with:
           images: ghcr.io/open-event-systems/interview-server
           tags: |
-            type=raw,value=latest
+            type=raw,value=dev
 
       - uses: docker/build-push-action@v4.1.1
         with:
