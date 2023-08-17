@@ -3,13 +3,10 @@ import copy
 from collections.abc import Awaitable, Callable
 
 from blacksheep import Application, Request, Response, Router
-from guardpost import Policy
-from guardpost.asynchronous.authentication import AuthenticationStrategy
-from guardpost.asynchronous.authorization import AuthorizationStrategy
 from oes.interview.config.interview import InterviewConfig
 from oes.interview.interview.step import HookStep
 from oes.interview.serialization import configure_converter, converter, json_default
-from oes.interview.server.auth import APIKeyHandler
+from oes.interview.server.auth import APIKeyHandler, authentication, authorization
 from oes.interview.server.docs import docs
 from oes.interview.server.settings import Settings
 from oes.interview.variables.env import jinja2_env
@@ -46,16 +43,13 @@ def make_app(settings: Settings, interview_config: InterviewConfig) -> Applicati
     app = Application(router=router_copy)
 
     # auth
-
-    app.use_authentication(AuthenticationStrategy()).add(
-        APIKeyHandler(settings.api_key)
+    authentication.add(
+        APIKeyHandler(
+            settings.api_key,
+        )
     )
 
-    authorization = AuthorizationStrategy()
-    policy = Policy("authenticated")
-    authorization.add(policy)
-    authorization.default_policy = policy
-
+    app.use_authentication(authentication)
     app.use_authorization(authorization)
 
     # services
