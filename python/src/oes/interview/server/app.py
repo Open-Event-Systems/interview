@@ -70,6 +70,10 @@ def make_app(settings: Settings, interview_config: InterviewConfig) -> Applicati
     configure_cors(
         app,
         allow_origins=settings.allowed_origins,
+        allow_headers=(
+            "Authorization",
+            "Content-Type",
+        ),
     )
     app.on_middlewares_configuration(configure_forwarded_headers)
 
