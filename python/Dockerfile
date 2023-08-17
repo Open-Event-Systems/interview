@@ -21,4 +21,4 @@ COPY --from=build /app/ /app/
 WORKDIR /config
 USER python
 ENTRYPOINT [ "/app/bin/oes-interview" ]
-CMD [ "--bind", "0.0.0.0:8001" ]
+CMD [ "--bind", "0.0.0.0", "--port", "8001" ]
