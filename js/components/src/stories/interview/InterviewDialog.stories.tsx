@@ -17,7 +17,6 @@ const askResult = {
         "x-type": "text",
         title: "First Name",
         "x-autocomplete": "given-name",
-        minLength: 1,
         maxLength: 100,
       },
       field_1: {
@@ -25,7 +24,6 @@ const askResult = {
         "x-type": "text",
         title: "Last Name",
         "x-autocomplete": "family-name",
-        minLength: 1,
         maxLength: 100,
       },
       field_2: {

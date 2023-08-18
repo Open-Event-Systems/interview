@@ -18,7 +18,7 @@ const Ajv = AjvModule.default
 const ajvErrors = ajvErrors_.default
 const ajvFormats = ajvFormats_.default
 
-const ajv = new Ajv({ allErrors: true, coerceTypes: true })
+const ajv = new Ajv({ allErrors: true, coerceTypes: false })
 
 ajvErrors(ajv)
 ajvFormats(ajv)
@@ -95,7 +95,9 @@ const createSchemaValidator = (schema: Schema): Validator => {
       return {
         value,
         errors: schemaValidator.errors
-          ? schemaValidator.errors.map((err) => getError(schema.title, err))
+          ? schemaValidator.errors
+              .reverse()
+              .map((err) => getError(schema.title, err))
           : [],
       }
     }
@@ -131,6 +133,18 @@ const getErrorMap = (schema: Schema) => {
     errors.maxLength = `must have ${schema.maxLength} characters or fewer`
   }
 
+  if (schema.oneOf) {
+    errors.oneOf = "is invalid"
+  }
+
+  if (schema.const) {
+    errors.const = "is invalid"
+  }
+
+  if (schema["x-type"] == "text") {
+    errors.type = "is required"
+  }
+
   return errors
 }
 
@@ -138,7 +152,8 @@ const createTextValidator = (schema: Schema): Validator => {
   return (value: unknown): ValidationResult => {
     if (typeof value == "string") {
       // text fields trim the string before performing other validation
-      const trimmed = value.trim()
+      // also coerce the empty string to null
+      const trimmed = value.trim() || null
       const errors = []
 
       // email format

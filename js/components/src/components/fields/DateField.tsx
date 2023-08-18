@@ -49,6 +49,9 @@ export const DateField = observer((props: DateFieldProps) => {
   return (
     <DateInput
       className={cx(classes.root, className)}
+      popoverProps={{
+        withinPortal: true,
+      }}
       label={state.schema.title}
       required={required || !state.schema.nullable}
       withAsterisk={required || !state.schema.nullable}
