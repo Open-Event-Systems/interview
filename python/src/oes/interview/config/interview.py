@@ -55,7 +55,9 @@ class InterviewConfigEntry:
             )
         )
 
-        return Interview(id=self.id, questions=questions, steps=self.steps)
+        return Interview(
+            id=self.id, title=self.title, questions=questions, steps=self.steps
+        )
 
 
 def load_interviews(
