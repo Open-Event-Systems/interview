@@ -52,6 +52,7 @@ export const DateField = observer((props: DateFieldProps) => {
       popoverProps={{
         withinPortal: true,
       }}
+      size="xs"
       label={state.schema.title}
       required={required || !state.schema.nullable}
       withAsterisk={required || !state.schema.nullable}
