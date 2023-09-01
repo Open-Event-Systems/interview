@@ -62,6 +62,26 @@ class SequenceProxy(Sequence[_T]):
     def __repr__(self) -> str:
         return repr(self._target)
 
+    def __eq__(self, other) -> bool:
+        return (
+            isinstance(other, (list, tuple, Sequence))
+            and not isinstance(other, (str, bytes))
+            and len(self) == len(other)
+            and tuple(self) == tuple(other)
+        )
+
+    def __add__(self, other) -> Sequence[_T]:
+        if isinstance(other, (list, tuple, Sequence)):
+            return list(self._target) + list(other)
+        else:
+            return NotImplemented
+
+    def __radd__(self, other) -> Sequence[_T]:
+        if isinstance(other, (list, tuple, Sequence)):
+            return list(other) + list(self._target)
+        else:
+            return NotImplemented
+
 
 def _make_proxy(expression: Locator, value: _T) -> _T:
     if isinstance(value, Mapping):
